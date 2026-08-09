@@ -19,7 +19,7 @@
 
 # production
 /build
-
+./public/hero_image
 # misc
 .DS_Store
 *.pem
