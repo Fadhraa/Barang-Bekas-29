@@ -1,22 +1,196 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
+import ModalUploader from "@/components/ImageUploader";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  onSnapshot,
+  query,
+  orderBy,
+  doc,
+  deleteDoc,
+} from "firebase/firestore";
+import { Plus, Package, Trash2, Edit3, Layers } from "lucide-react";
 
 export default function ProdukPage() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Real-time Listener Firestore
+  useEffect(() => {
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((docItem) => ({
+          id: docItem.id,
+          ...docItem.data(),
+        }));
+        setProducts(list);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Firestore Listen Error:", error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleOpenAddModal = () => {
+    setModalMode("add");
+    setSelectedProduct(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (product: any) => {
+    setModalMode("edit");
+    setSelectedProduct(product);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus produk "${name}"?`)) {
+      try {
+        await deleteDoc(doc(db, "products", id));
+        alert("Produk berhasil dihapus!");
+      } catch (err: any) {
+        alert("Gagal menghapus produk: " + (err.message || "Terjadi kesalahan."));
+      }
+    }
+  };
+
   return (
-    <div className="w-full min-h-screen relative overflow-x-hidden bg-surface">
-      {/* Menampilkan Navbar dengan navigasi khusus admin */}
+    <div className="w-full min-h-screen relative overflow-x-hidden bg-surface pb-24">
+      {/* Navbar khusus Admin */}
       <Navbar />
-      
-      {/* Konten Halaman Manajemen Produk */}
-      <div className="p-6 max-w-6xl mx-auto pb-24 md:pb-6">
-        <h1 className="text-2xl font-bold text-slate-800 font-serif">
-          Manajemen Produk
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Daftar barang bekas pribadi yang Anda jual. Anda bisa menambah, mengedit, atau menghapus produk di sini.
-        </p>
+
+      {/* Header Halaman */}
+      <div className="p-6 max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-200/60">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800 font-serif">
+            Manajemen Produk
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Daftar barang bekas yang Anda jual. Tambah, edit, atau hapus produk di sini.
+          </p>
+        </div>
+
+        <button
+          onClick={handleOpenAddModal}
+          className="px-5 py-2.5 bg-primary text-white text-xs font-bold rounded-xl shadow-sm hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 self-start md:self-auto"
+        >
+          <Plus className="w-4 h-4" />
+          Tambah Produk Baru
+        </button>
       </div>
+
+      {/* Grid Daftar Produk */}
+      <div className="p-6 max-w-6xl mx-auto">
+        {loading ? (
+          <div className="text-center py-12 text-slate-400 text-sm">
+            Memuat daftar produk...
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-16 bg-white border border-slate-200/80 rounded-2xl p-8 shadow-xs">
+            <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="font-bold text-slate-700 text-base">Belum Ada Produk</h3>
+            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+              Anda belum menambahkan barang bekas apapun. Klik tombol "Tambah Produk Baru" untuk mulai memasukkan barang.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {products.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+              >
+                {/* Foto Produk */}
+                <div className="relative aspect-square bg-slate-100 overflow-hidden">
+                  {item.images && item.images.length > 0 ? (
+                    <img
+                      src={item.images[0]}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+                      Tidak ada foto
+                    </div>
+                  )}
+
+                  <span
+                    className={`absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-xs ${
+                      item.status === "Tersedia"
+                        ? "bg-green-600 text-white"
+                        : "bg-red-600 text-white"
+                    }`}
+                  >
+                    {item.status || "Tersedia"}
+                  </span>
+                </div>
+
+                {/* Informasi Produk */}
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-1.5 text-[10px] font-semibold text-primary mb-1">
+                      <Layers className="w-3 h-3" />
+                      {item.category} • {item.condition}
+                    </div>
+                    <h3 className="font-bold text-slate-800 text-sm line-clamp-1">
+                      {item.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 line-clamp-2 mt-1">
+                      {item.description || "Tidak ada deskripsi."}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Harga</span>
+                      <span className="font-bold text-sm text-slate-800">
+                        Rp {item.price?.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleOpenEditModal(item)}
+                        className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:text-primary hover:border-primary/50 transition-colors"
+                        title="Edit Produk"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteProduct(item.id, item.name)}
+                        className="p-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                        title="Hapus Produk"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal Form Tambah / Edit Produk */}
+      <ModalUploader
+        modalMode={modalMode}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        initialData={selectedProduct}
+      />
     </div>
   );
 }
