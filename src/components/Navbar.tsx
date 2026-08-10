@@ -2,10 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, NotebookTabs } from "lucide-react";
+import { Home, NotebookTabs, Package, ReceiptText } from "lucide-react";
 
-export default function Navbar() {
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ElementType;
+}
+
+// Menu Navigasi Pembeli (Default)
+const CUSTOMER_ITEMS: NavItem[] = [
+  { label: "Home", href: "/", icon: Home },
+  { label: "Pesanan", href: "/admin", icon: NotebookTabs },
+];
+
+// Menu Navigasi Admin (Pesanan, Produk, Transaksi)
+const ADMIN_ITEMS: NavItem[] = [
+  { label: "Pesanan", href: "/admin", icon: NotebookTabs },
+  { label: "Produk", href: "/admin/produk", icon: Package },
+  { label: "Transaksi", href: "/admin/transaksi", icon: ReceiptText },
+];
+
+interface NavbarProps {
+  items?: NavItem[];
+}
+
+export default function Navbar({ items }: NavbarProps) {
   const pathname = usePathname();
+
+  // Otomatis aktifkan menu admin jika mengakses rute /admin atau jika props items diisi
+  const isAdminRoute = pathname.startsWith("/admin");
+  const navItems = items || (isAdminRoute ? ADMIN_ITEMS : CUSTOMER_ITEMS);
 
   return (
     <nav
@@ -47,134 +74,78 @@ export default function Navbar() {
 
       {/* Navigasi Links - Tengah (Kolom 2) */}
       <div className="w-full md:w-auto mx-auto md:flex md:justify-center">
-        <ul className="flex items-center justify-around md:justify-center gap-12 md:gap-8 w-full">
-          <li>
-            <Link
-              href="/"
-              className="flex flex-col items-center justify-center gap-0.5 group"
-            >
-              {/* Mobile Icon (Sembunyi di Desktop) */}
-              <div
-                className={`
-                  flex 
-                  items-center 
-                  justify-center 
-                  py-1 
-                  px-5 
-                  rounded-full 
-                  transition-all 
-                  duration-200 
-                  md:hidden
-                  ${
-                    pathname === "/"
-                      ? "bg-primary/10 text-primary"
-                      : "text-sky-200 hover:text-white"
-                  }
-                `}
-              >
-                <Home className="h-5 w-5" />
-              </div>
+        <ul className="flex items-center justify-around md:justify-center gap-8 md:gap-8 w-full">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            // Pengecekan active tab secara presisi
+            const isActive = pathname === item.href;
 
-              {/* Mobile Text (Sembunyi di Desktop) */}
-              <span
-                className={`
-                  text-[10px] 
-                  md:hidden 
-                  font-semibold 
-                  transition-colors 
-                  ${pathname === "/" ? "text-primary" : "text-sky-200"}
-                `}
-              >
-                Home
-              </span>
+            return (
+              <li key={item.label}>
+                <Link
+                  href={item.href}
+                  className="flex flex-col items-center justify-center gap-0.5 group"
+                >
+                  {/* Mobile Icon (Sembunyi di Desktop) */}
+                  <div
+                    className={`
+                      flex 
+                      items-center 
+                      justify-center 
+                      py-1 
+                      px-4 
+                      rounded-full 
+                      transition-all 
+                      duration-200 
+                      md:hidden
+                      ${
+                        isActive
+                          ? "bg-primary/10 text-primary font-bold"
+                          : "text-sky-600 hover:text-primary"
+                      }
+                    `}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
 
-              {/* Desktop Text-Only (Sembunyi di Mobile) */}
-              <span
-                className={`
-                  hidden 
-                  md:inline 
-                  text-sm 
-                  font-semibold 
-                  py-1 
-                  px-1 
-                  border-b-2 
-                  transition-all 
-                  duration-200
-                  ${
-                    pathname === "/"
-                      ? "text-white border-white"
-                      : "text-sky-100 border-transparent hover:text-white hover:border-white/30"
-                  }
-                `}
-              >
-                Home
-              </span>
-            </Link>
-          </li>
+                  {/* Mobile Text (Sembunyi di Desktop) */}
+                  <span
+                    className={`
+                      text-[10px] 
+                      md:hidden 
+                      font-semibold 
+                      transition-colors 
+                      ${isActive ? "text-primary font-bold" : "text-sky-600"}
+                    `}
+                  >
+                    {item.label}
+                  </span>
 
-          <li>
-            <Link
-              href="/admin"
-              className="flex flex-col items-center justify-center gap-0.5 group"
-            >
-              {/* Mobile Icon (Sembunyi di Desktop) */}
-              <div
-                className={`
-                  flex 
-                  items-center 
-                  justify-center 
-                  py-1 
-                  px-5 
-                  rounded-full 
-                  transition-all 
-                  duration-200 
-                  md:hidden
-                  ${
-                    pathname === "/admin"
-                      ? "bg-primary/10 text-primary"
-                      : "text-sky-600 hover:text-white"
-                  }
-                `}
-              >
-                <NotebookTabs className="h-5 w-5" />
-              </div>
-
-              {/* Mobile Text (Sembunyi di Desktop) */}
-              <span
-                className={`
-                  text-[10px] 
-                  md:hidden 
-                  font-semibold 
-                  transition-colors 
-                  ${pathname === "/pesanan" ? "text-primary" : "text-sky-600"}
-                `}
-              >
-                Pesanan
-              </span>
-
-              {/* Desktop Text-Only (Sembunyi di Mobile) */}
-              <span
-                className={`
-                  hidden 
-                  md:inline 
-                  text-sm 
-                  font-semibold 
-                  py-1 
-                  px-1 
-                  border-b-2 
-                  transition-all 
-                  duration-200
-                  ${
-                    pathname === "/admin"
-                      ? "text-white border-white"
-                      : "text-sky-100 border-transparent hover:text-white hover:border-white/30"
-                  }
-                `}
-              >
-                Pesanan
-              </span>
-            </Link>
-          </li>
+                  {/* Desktop Text-Only (Sembunyi di Mobile) */}
+                  <span
+                    className={`
+                      hidden 
+                      md:inline 
+                      text-sm 
+                      font-semibold 
+                      py-1 
+                      px-1 
+                      border-b-2 
+                      transition-all 
+                      duration-200
+                      ${
+                        isActive
+                          ? "text-white border-white"
+                          : "text-sky-100 border-transparent hover:text-white hover:border-white/30"
+                      }
+                    `}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </div>
 

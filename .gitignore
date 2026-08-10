@@ -19,7 +19,9 @@
 
 # production
 /build
-./public/hero_image
+/public/hero_img
+/src/app/setup-admin
+
 # misc
 .DS_Store
 *.pem
