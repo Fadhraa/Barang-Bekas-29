@@ -1,14 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
 @import "tailwindcss";
 
 @theme {
   --color-primary: #1A76AD;
-  --color-surface: #FCFDFF
-    /* Font */
-    --font-poppins: 'Poppins', sans-serif;
+  --color-surface: #FCFDFF;
+  /* Font */
+  --font-rubik: 'Rubik', sans-serif;
 }
 
 :root {
-  --background: #ffffff;
+  --background: #2f2f2f;
   --foreground: #171717;
 }
 

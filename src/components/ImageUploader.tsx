@@ -277,6 +277,9 @@ export default function ModalUploader({
                 <option value="Pakaian">Pakaian</option>
                 <option value="Buku">Buku</option>
                 <option value="Otomotif">Otomotif</option>
+                <option value="Perabotan">Perabotan</option>
+                <option value="Olahraga">Olahraga</option>
+
                 <option value="Lain-lain">Lain-lain</option>
               </select>
             </div>
