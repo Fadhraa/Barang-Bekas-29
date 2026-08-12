@@ -1,28 +1,12 @@
-"use client"
-import { useState, useEffect } from "react";
-import { subscribeToProducts, Product } from "@/service/productService";
+"use client";
 
-export function useProducts(limitCount?: number) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+import { useProductContext } from "@/context/ProductContext";
 
-  useEffect(() => {
-    const unsubscribe = subscribeToProducts(
-      (data) => {
-        setProducts(data);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setLoading(false);
-      },
-      limitCount
-    );
-
-    // Fungsi cleanup otomatis
-    return () => unsubscribe();
-  }, [limitCount]);
-
-  return { products, loading, error };
+/**
+ * Custom Hook: useProducts
+ * Mengambil data produk dari Global Product Cache (ProductContext).
+ * Bebas re-fetch saat berpindah antar halaman (0 ms & 0 Reads ke Firebase).
+ */
+export function useProducts() {
+  return useProductContext();
 }

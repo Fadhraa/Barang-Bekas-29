@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@/context/cartContext";
+import { ProductProvider } from "@/context/ProductContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,17 +16,23 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Barang Bekas 29",
-  description: "Barang Bekas 29",
+  description: "Toko Online Barang Bekas Pilihan",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
-      lang="en"
+      lang="id"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <CartProvider>{children}</CartProvider>
+        <ProductProvider>
+          <CartProvider>{children}</CartProvider>
+        </ProductProvider>
       </body>
     </html>
   );

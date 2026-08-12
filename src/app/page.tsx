@@ -18,8 +18,8 @@ import {
 import { useCart } from "@/context/cartContext";
 
 export default function Home() {
-  // Ambil 20 produk pertama untuk optimasi performa layar
-  const { products, loading, error } = useProducts(20);
+  // Mengambil data produk dari Global Product Cache (0 ms & 0 Re-fetch saat bolak-balik halaman)
+  const { products, loading, error } = useProducts();
   const { addToCart, totalItems, cart } = useCart();
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
