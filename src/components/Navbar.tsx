@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, NotebookTabs, Package, ReceiptText } from "lucide-react";
+import {
+  Home,
+  NotebookTabs,
+  Package,
+  ReceiptText,
+  ShoppingCart,
+} from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -12,8 +18,9 @@ export interface NavItem {
 
 // Menu Navigasi Pembeli (Default)
 const CUSTOMER_ITEMS: NavItem[] = [
-  { label: "Home", href: "/", icon: Home },
-  { label: "Pesanan", href: "/admin", icon: NotebookTabs },
+  { label: "Beranda", href: "/", icon: Home },
+  { label: "Keranjang", href: "/Keranjang", icon: ShoppingCart },
+  { label: "Pesanan", href: "/Pesanan", icon: ReceiptText },
 ];
 
 // Menu Navigasi Admin (Pesanan, Produk, Transaksi)

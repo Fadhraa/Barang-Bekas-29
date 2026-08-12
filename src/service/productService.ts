@@ -1,9 +1,9 @@
 import { db } from "@/lib/firebase";
 import { 
-    
     collection,
     query,
     orderBy,
+    limit,
     onSnapshot,
     doc,
     addDoc,
@@ -11,7 +11,6 @@ import {
     deleteDoc,
     serverTimestamp,
     Unsubscribe
-
  } from "firebase/firestore";
 
  export interface Product{
@@ -27,12 +26,17 @@ import {
     createdAt: any;
     updateAt: any;
  }
-//  get produk
+
+//  get produk (Mendukung limit jumlah item untuk optimasi performa)
  export function subscribeToProducts(
   onData: (products: Product[]) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
+  limitCount?: number
 ): Unsubscribe {
-  const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+  const q = limitCount
+    ? query(collection(db, "products"), orderBy("createdAt", "desc"), limit(limitCount))
+    : query(collection(db, "products"), orderBy("createdAt", "desc"));
+
   return onSnapshot(
     q,
     (snapshot) => {

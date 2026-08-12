@@ -1,18 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Modal from "@/components/Modal";
 import { useProducts } from "@/hooks/useProducts";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Product } from "@/service/productService";
-import { Search, MessageCircle, Layers, Sparkles, Package } from "lucide-react";
+import {
+  Search,
+  MessageCircle,
+  Layers,
+  Sparkles,
+  Package,
+  ShoppingCart,
+} from "lucide-react";
+import { useCart } from "@/context/cartContext";
 
 export default function Home() {
-  const { products, loading, error } = useProducts();
+  // Ambil 20 produk pertama untuk optimasi performa layar
+  const { products, loading, error } = useProducts(20);
+  const { addToCart, totalItems, cart } = useCart();
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+
+  // Gunakan debounce untuk menunda penyaringan hingga pembeli selesai mengetik (400ms)
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
   const categories = [
     "Semua",
@@ -25,23 +39,30 @@ export default function Home() {
     "Lain-lain",
   ];
 
-  // Filter Produk berdasarkan Kategori & Query Pencarian
+  // Filter Produk berdasarkan Kategori & Query Pencarian (Debounced)
   const filteredProducts = products.filter((p) => {
     const matchesCategory =
       selectedCategory === "Semua" || p.category === selectedCategory;
     const matchesSearch = p.name
       .toLowerCase()
-      .includes(searchQuery.toLowerCase());
+      .includes(debouncedSearchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+  useEffect(() => {
+    console.log(cart);
+  }, [cart]);
+  const handleAddToCart = (product: Product) => {
+    addToCart(product);
 
+    alert(`"${product.name}" telah ditambahkan ke keranjang!`);
+  };
   // Handler Beli / Tanya via WhatsApp
   const handleBuyWhatsApp = (product: Product) => {
     const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "628123456789";
     const text = `Halo Admin BarangBekas29, saya berminat membeli produk:\n\n*${product.name}*\nHarga: Rp ${Number(product.price).toLocaleString("id-ID")}\nKategori: ${product.category}\n\nApakah barang ini masih tersedia?`;
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
-      "_blank"
+      "_blank",
     );
   };
 
@@ -57,7 +78,6 @@ export default function Home() {
 
       {/* Container Utama Katalog Pembeli */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-        
         {/* Baris Search & Filter Kategori */}
         <div className="space-y-3 mb-6">
           {/* Search Input Bar */}
@@ -106,7 +126,8 @@ export default function Home() {
               Produk Tidak Ditemukan
             </h3>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-              Belum ada barang bekas di kategori ini atau kata kunci pencarian Anda tidak cocok.
+              Belum ada barang bekas di kategori ini atau kata kunci pencarian
+              Anda tidak cocok.
             </p>
           </div>
         ) : (
@@ -163,16 +184,17 @@ export default function Home() {
                         Rp {Number(product.price || 0).toLocaleString("id-ID")}
                       </span>
                     </div>
-
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDetailProduct(product);
-                      }}
-                      className="px-2.5 py-1 border border-primary text-primary hover:bg-primary hover:text-white rounded-full text-[11px] font-semibold transition-all"
-                    >
-                      Detail
-                    </button>
+                    <div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDetailProduct(product);
+                        }}
+                        className="px-2.5 py-1 border border-primary text-primary hover:bg-primary hover:text-white rounded-full text-[11px] font-semibold transition-all"
+                      >
+                        Detail
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -243,6 +265,13 @@ export default function Home() {
                 ? "Produk Sudah Terjual"
                 : "Beli / Tanya via WhatsApp"}
             </button>
+            <div
+              onClick={() => handleAddToCart(detailProduct)}
+              className="border border-darkPrimary text-primary flex items-center justify-center gap-2 py-3 rounded-xl hover:bg-darkPrimary hover:text-secondary transition duration-[500ms] cursor-pointer"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              <span>Tambah ke keranjang</span>
+            </div>
           </div>
         )}
       </Modal>

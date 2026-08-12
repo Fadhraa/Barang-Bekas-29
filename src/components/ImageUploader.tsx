@@ -167,11 +167,8 @@ export default function ModalUploader({
         {/* Header Modal */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary">
-              <Sparkles className="w-5 h-5" />
-            </div>
             <div>
-              <h2 className="font-serif font-bold text-lg text-slate-800">
+              <h2 className="font-rubik font-bold text-lg text-slate-800">
                 {modalMode === "add"
                   ? "Tambah Produk Baru"
                   : "Edit Informasi Produk"}

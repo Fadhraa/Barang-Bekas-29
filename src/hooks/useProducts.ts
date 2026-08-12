@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { subscribeToProducts, Product } from "@/service/productService";
 
-export function useProducts() {
+export function useProducts(limitCount?: number) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -16,12 +16,13 @@ export function useProducts() {
       (err) => {
         setError(err);
         setLoading(false);
-      }
+      },
+      limitCount
     );
 
     // Fungsi cleanup otomatis
     return () => unsubscribe();
-  }, []);
+  }, [limitCount]);
 
   return { products, loading, error };
 }
