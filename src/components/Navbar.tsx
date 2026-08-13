@@ -19,8 +19,8 @@ export interface NavItem {
 // Menu Navigasi Pembeli (Default)
 const CUSTOMER_ITEMS: NavItem[] = [
   { label: "Beranda", href: "/", icon: Home },
-  { label: "Keranjang", href: "/Keranjang", icon: ShoppingCart },
-  { label: "Pesanan", href: "/Pesanan", icon: ReceiptText },
+  { label: "Keranjang", href: "/keranjang", icon: ShoppingCart },
+  { label: "Pesanan", href: "/pesanan", icon: ReceiptText },
 ];
 
 // Menu Navigasi Admin (Pesanan, Produk, Transaksi)

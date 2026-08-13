@@ -1,59 +1,107 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { subscribeToProducts, Product } from "@/service/productService";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import {
+  fetchProductsPage,
+  Product,
+  subscribeToProducts,
+} from "@/service/productService";
+import { QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 
 interface ProductContextType {
   products: Product[];
   loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
   error: Error | null;
+  loadMore: () => Promise<void>;
 }
 
-const ProductContext = createContext<ProductContextType | undefined>(undefined);
+const ProductContext = createContext<ProductContextType | undefined>(
+  undefined
+);
 
-/**
- * ProductProvider: Gudang Cache Produk Global
- * Hanya melakukan fetch 1x ke Firebase saat aplikasi dibuka,
- * dan menyimpan datanya di memori browser agar 0 Re-fetch saat bolak-balik halaman.
- */
 export function ProductProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [lastDoc, setLastDoc] =
+    useState<QueryDocumentSnapshot<DocumentData> | null>(null);
 
+  // Initial load: Pemuatan awal (8 Produk pertama)
   useEffect(() => {
-    // Membuka listener real-time 10 produk pertama
-    const unsubscribe = subscribeToProducts(
-      (data) => {
-        setProducts(data);
-        setLoading(false);
-      },
-      (err) => {
-        setError(err);
-        setLoading(false);
-      },
-      10 // Limit 10 produk untuk layar pertama
-    );
+    let isMounted = true;
+    async function loadInitialProducts() {
+      try {
+        const res = await fetchProductsPage(null, 8);
+        if (isMounted) {
+          setProducts(res.products);
+          setLastDoc(res.lastDoc);
+          setHasMore(res.hasMore);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err);
+          setLoading(false);
+        }
+      }
+    }
 
-    // Cleanup listener saat aplikasi ditutup
-    return () => unsubscribe();
+    loadInitialProducts();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
+  // Fungsi memuat 8 produk berikutnya (Load More)
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || !lastDoc) return;
+
+    setLoadingMore(true);
+    try {
+      const res = await fetchProductsPage(lastDoc, 8);
+      setProducts((prev) => [...prev, ...res.products]);
+      setLastDoc(res.lastDoc);
+      setHasMore(res.hasMore);
+    } catch (err: any) {
+      console.error("Gagal loadMore produk:", err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   return (
-    <ProductContext.Provider value={{ products, loading, error }}>
+    <ProductContext.Provider
+      value={{
+        products,
+        loading,
+        loadingMore,
+        hasMore,
+        error,
+        loadMore,
+      }}
+    >
       {children}
     </ProductContext.Provider>
   );
 }
 
-/**
- * Custom Hook: useProductContext
- * Dipakai oleh komponen/halaman apapun untuk mengambil cache produk secara instan (0 ms & 0 Reads)
- */
 export function useProductContext() {
   const context = useContext(ProductContext);
   if (!context) {
-    throw new Error("useProductContext harus digunakan di dalam <ProductProvider>");
+    throw new Error(
+      "useProductContext harus digunakan di dalam <ProductProvider>"
+    );
   }
   return context;
 }

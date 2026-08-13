@@ -14,13 +14,17 @@ import {
   Sparkles,
   Package,
   ShoppingCart,
+  Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { useCart } from "@/context/cartContext";
+import { useToast } from "@/context/ToastContext";
 
 export default function Home() {
-  // Mengambil data produk dari Global Product Cache (0 ms & 0 Re-fetch saat bolak-balik halaman)
-  const { products, loading, error } = useProducts();
+  // Mengambil data produk dinamis dari Global Product Cache
+  const { products, loading, loadingMore, hasMore, loadMore, error } = useProducts();
   const { addToCart, totalItems, cart } = useCart();
+  const { showToast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
@@ -48,13 +52,12 @@ export default function Home() {
       .includes(debouncedSearchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
-  useEffect(() => {
-    console.log(cart);
-  }, [cart]);
-  const handleAddToCart = (product: Product) => {
-    addToCart(product);
 
-    alert(`"${product.name}" telah ditambahkan ke keranjang!`);
+  const handleAddToCart = (product: Product) => {
+    const isSuccess = addToCart(product);
+    if (isSuccess) {
+      showToast(`"${product.name}" telah ditambahkan ke keranjang!`, "success");
+    }
   };
   // Handler Beli / Tanya via WhatsApp
   const handleBuyWhatsApp = (product: Product) => {
@@ -131,75 +134,100 @@ export default function Home() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                onClick={() => setDetailProduct(product)}
-                className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group"
-              >
-                {/* Foto Produk */}
-                <div className="relative aspect-square bg-slate-100 overflow-hidden">
-                  {product.images && product.images.length > 0 ? (
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
-                      Tidak ada foto
-                    </div>
-                  )}
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  onClick={() => setDetailProduct(product)}
+                  className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group"
+                >
+                  {/* Foto Produk */}
+                  <div className="relative aspect-square bg-slate-100 overflow-hidden">
+                    {product.images && product.images.length > 0 ? (
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+                        Tidak ada foto
+                      </div>
+                    )}
 
-                  {/* Badge Status */}
-                  <span
-                    className={`absolute top-2 right-2 px-2 py-0.5 text-[9px] font-bold rounded-md shadow-xs ${
-                      product.status === "Tersedia"
-                        ? "bg-green-600 text-white"
-                        : "bg-red-600 text-white"
-                    }`}
-                  >
-                    {product.status || "Tersedia"}
-                  </span>
-                </div>
-
-                {/* Info Produk */}
-                <div className="p-3.5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <span className="text-[10px] font-semibold text-primary block line-clamp-1">
-                      {product.category} • {product.condition}
+                    {/* Badge Status */}
+                    <span
+                      className={`absolute top-2 right-2 px-2 py-0.5 text-[9px] font-bold rounded-md shadow-xs ${
+                        product.status === "Tersedia"
+                          ? "bg-green-600 text-white"
+                          : "bg-red-600 text-white"
+                      }`}
+                    >
+                      {product.status || "Tersedia"}
                     </span>
-                    <h3 className="font-bold text-slate-800 text-xs sm:text-sm line-clamp-1 mt-0.5">
-                      {product.name}
-                    </h3>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                  {/* Info Produk */}
+                  <div className="p-3.5 flex-1 flex flex-col justify-between">
                     <div>
-                      <span className="text-[9px] text-slate-400 block font-medium">
-                        Harga
+                      <span className="text-[10px] font-semibold text-primary block line-clamp-1">
+                        {product.category} • {product.condition}
                       </span>
-                      <span className="font-bold text-xs sm:text-sm text-slate-800">
-                        Rp {Number(product.price || 0).toLocaleString("id-ID")}
-                      </span>
+                      <h3 className="font-bold text-slate-800 text-xs sm:text-sm line-clamp-1 mt-0.5">
+                        {product.name}
+                      </h3>
                     </div>
-                    <div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDetailProduct(product);
-                        }}
-                        className="px-2.5 py-1 border border-primary text-primary hover:bg-primary hover:text-white rounded-full text-[11px] font-semibold transition-all"
-                      >
-                        Detail
-                      </button>
+
+                    <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                      <div>
+                        <span className="text-[9px] text-slate-400 block font-medium">
+                          Harga
+                        </span>
+                        <span className="font-bold text-xs sm:text-sm text-slate-800">
+                          Rp {Number(product.price || 0).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                      <div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailProduct(product);
+                          }}
+                          className="px-2.5 py-1 border border-primary text-primary hover:bg-primary hover:text-white rounded-full text-[11px] font-semibold transition-all"
+                        >
+                          Detail
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Tombol Load More / Muat Lebih Banyak */}
+            {hasMore && (
+              <div className="mt-8 text-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-2.5 bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 active:scale-[0.98] transition-all shadow-xs inline-flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {loadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <span>Memuat Produk...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Muat Lebih Banyak Produk</span>
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                    </>
+                  )}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </main>
 

@@ -1,6 +1,12 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore,
+} from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
 
 // Clean and sanitize env variables (strip quotes and whitespace)
@@ -47,13 +53,25 @@ try {
   auth = null as unknown as Auth;
 }
 
-// Inisialisasi Firestore dengan Try-Catch Guard
+// Inisialisasi Firestore dengan Persistent Local Cache (IndexedDB) & Multi-tab support
 let db: Firestore;
 try {
-  db = getFirestore(app);
+  if (typeof window !== "undefined") {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  } else {
+    db = getFirestore(app);
+  }
 } catch (error) {
-  console.warn("Firestore init warning during build:", error);
-  db = null as unknown as Firestore;
+  try {
+    db = getFirestore(app);
+  } catch (err) {
+    console.warn("Firestore init warning during build:", err);
+    db = null as unknown as Firestore;
+  }
 }
 
 // Inisialisasi Storage dengan Try-Catch Guard
@@ -66,4 +84,3 @@ try {
 }
 
 export { app, auth, db, storage };
-

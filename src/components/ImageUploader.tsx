@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useToast } from "@/context/ToastContext";
 import {
   X,
   UploadCloud,
@@ -20,6 +21,7 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
+
 interface ModalUploaderProps {
   modalMode: "add" | "edit";
   isOpen: boolean;
@@ -33,6 +35,8 @@ export default function ModalUploader({
   onClose,
   initialData,
 }: ModalUploaderProps) {
+  const { showToast } = useToast();
+  
   // Form States
   const [namaBarang, setNamaBarang] = useState("");
   const [hargaBarang, setHargaBarang] = useState("");
@@ -44,6 +48,7 @@ export default function ModalUploader({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Sinkronisasi data awal jika mode edit
   useEffect(() => {
     if (modalMode === "edit" && initialData) {
@@ -62,6 +67,7 @@ export default function ModalUploader({
       setKondisi("Bagus");
       setDeskripsi("");
       setImagePreviews([]);
+      setSelectedFiles([]);
     }
   }, [modalMode, initialData, isOpen]);
 
@@ -71,7 +77,7 @@ export default function ModalUploader({
       const newFiles = Array.from(e.target.files);
 
       if (imagePreviews.length + newFiles.length > 4) {
-        alert("Maksimal 4 gambar per produk.");
+        showToast("Maksimal 4 gambar per produk.", "error");
         return;
       }
 
@@ -82,6 +88,7 @@ export default function ModalUploader({
   };
   const handleRemoveImage = (index: number) => {
     setImagePreviews(imagePreviews.filter((_, i) => i !== index));
+    setSelectedFiles(selectedFiles.filter((_, i) => i !== index));
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,20 +140,21 @@ export default function ModalUploader({
           ...productPayload,
           createdAt: serverTimestamp(),
         });
-        alert("Produk berhasil ditambahkan!");
+        showToast("Produk berhasil ditambahkan!", "success");
         setSelectedFiles([]);
         setImagePreviews([]);
       } else if (modalMode === "edit" && initialData?.id) {
         const docRef = doc(db, "products", initialData.id);
         await updateDoc(docRef, productPayload);
-        alert("Produk berhasil diperbarui!");
+        showToast("Produk berhasil diperbarui!", "success");
       }
 
       onClose();
     } catch (error: any) {
       console.error("Error Simpan Produk:", error);
-      alert(
+      showToast(
         "Gagal menyimpan produk: " + (error.message || "Terjadi kesalahan."),
+        "error"
       );
     } finally {
       setLoading(false);

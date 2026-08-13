@@ -8,6 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { Product } from "@/service/productService";
+import { useToast } from "@/context/ToastContext";
 
 export interface CartItem {
   product: Product;
@@ -16,17 +17,19 @@ export interface CartItem {
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product) => boolean;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   feeWebsite: number;
   totalPrice: number;
+  totalAmount: number;
 }
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { showToast } = useToast();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   useEffect(() => {
@@ -48,21 +51,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [cart, isLoaded]);
 
   // fungsi tambah ke keranjang
-  const addToCart = (product: Product) => {
-    if (!product.id) return;
-
+  const addToCart = (product: Product): boolean => {
+    if (!product.id) return false;
+    const existingItem = cart.find((item) => item.product.id === product.id);
+    const currentQty = existingItem ? existingItem.quantity : 0;
+    if (currentQty + 1 > product.stock) {
+      showToast(
+        `Stok "${product.name}" tidak mencukupi! (Sisa stok: ${product.stock})`,
+        "error"
+      );
+      return false;
+    }
     setCart((prevCart) => {
       const existingIndex = prevCart.findIndex(
         (item) => item.product.id === product.id,
       );
-      const currentQty =
-        existingIndex > -1 ? prevCart[existingIndex].quantity : 0;
-      if (currentQty + 1 > product.stock) {
-        alert(
-          `Stok "${product.name}" tidak mencukupi! (Sisa stok: ${product.stock})`,
-        );
-        return prevCart;
-      }
+
       if (existingIndex > -1) {
         const newCart = [...prevCart];
         newCart[existingIndex].quantity += 1;
@@ -70,6 +74,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prevCart, { product, quantity: 1 }];
     });
+    return true;
   };
   // fungsi hapus keranjang
   const removeFromCart = (productId: string) => {
@@ -83,6 +88,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
+    }
+    const currentItem = cart.find((item) => item.product.id === productId);
+    if (currentItem) {
+      const currentQty = currentItem.quantity;
+      if (quantity > currentItem.product.stock) {
+        alert(
+          `Stok "${currentItem.product.name}" tidak mencukupi! (Sisa stok: ${currentItem.product.stock})`,
+        );
+        return;
+      }
     }
     setCart((prevCart) =>
       prevCart.map((item) =>
@@ -102,7 +117,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (sum, item) => sum + (Number(item.product.price) || 0) * item.quantity,
     0,
   );
-  const feeWebsite = totalPrice * 0.5;
+  const feeWebsite = totalPrice * 0.005;
   const totalAmount = totalPrice + feeWebsite;
   return (
     <CartContext.Provider
@@ -115,6 +130,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         feeWebsite,
         totalItems,
         totalPrice,
+        totalAmount,
       }}
     >
       {children}
