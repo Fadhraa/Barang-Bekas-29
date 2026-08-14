@@ -90,12 +90,29 @@ export default function CheckoutPage() {
   // Total Pembayaran (Barang + Fee Website + Ongkir Kurir)
   const grandTotal = totalAmount + selectedCourier.price;
 
+  // Helper Simpan ID Pesanan ke LocalStorage HP Pembeli
+  const saveOrderToLocalStorage = (orderId: string) => {
+    try {
+      const existing = JSON.parse(
+        localStorage.getItem("barang_bekas_my_orders") || "[]"
+      );
+      if (!existing.includes(orderId)) {
+        localStorage.setItem(
+          "barang_bekas_my_orders",
+          JSON.stringify([orderId, ...existing])
+        );
+      }
+    } catch (e) {
+      console.error("Gagal menyimpan orderId ke localStorage", e);
+    }
+  };
+
   // Handler Submit Pembayaran via Midtrans Snap
   const handleMidtransPayment = async () => {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
       showToast(
         "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error",
+        "error"
       );
       return;
     }
@@ -152,7 +169,10 @@ export default function CheckoutPage() {
         status: "Menunggu Pembayaran",
       });
 
-      // 3. Minta Token Snap dari API Route Tokenizer membawa paymentMethod
+      // 3. Simpan ke LocalStorage HP Pembeli untuk Privasi
+      saveOrderToLocalStorage(orderId);
+
+      // 4. Minta Token Snap dari API Route Tokenizer membawa paymentMethod
       const res = await fetch("/api/tokenizer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -173,13 +193,13 @@ export default function CheckoutPage() {
 
       if (!res.ok || !data.token) {
         throw new Error(
-          data.error || "Gagal mendapatkan token transaksi Midtrans",
+          data.error || "Gagal mendapatkan token transaksi Midtrans"
         );
       }
 
       setIsProcessing(false);
 
-      // 4. Buka Midtrans Snap Popup Window
+      // 5. Buka Midtrans Snap Popup Window
       if (window.snap) {
         window.snap.pay(data.token, {
           onSuccess: async function (result: any) {
@@ -189,7 +209,7 @@ export default function CheckoutPage() {
             clearCart();
             showToast(
               "Pembayaran Berhasil! Pesanan Anda sedang diproses.",
-              "success",
+              "success"
             );
             router.push("/pesanan");
           },
@@ -200,7 +220,7 @@ export default function CheckoutPage() {
             clearCart();
             showToast(
               "Pesanan dibuat! Silakan selesaikan pembayaran Anda.",
-              "info",
+              "info"
             );
             router.push("/pesanan");
           },
@@ -218,21 +238,48 @@ export default function CheckoutPage() {
       console.error("Payment Error:", err);
       showToast(
         err.message || "Terjadi kesalahan saat memproses pembayaran",
-        "error",
+        "error"
       );
       setIsProcessing(false);
     }
   };
 
   // Handler Beli / Tanya via WhatsApp
-  const handleWhatsAppCheckout = () => {
+  const handleWhatsAppCheckout = async () => {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
       showToast(
         "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error",
+        "error"
       );
       return;
     }
+
+    const orderId = `ORD-${Date.now()}`;
+    await createOrder({
+      orderId,
+      customerName: namaLengkap,
+      customerPhone: noWhatsApp,
+      customerEmail: email,
+      address: alamatLengkap,
+      kecamatan,
+      kota,
+      provinsi,
+      notes: catatan,
+      items: cart.map((i) => ({
+        id: i.product.id,
+        name: i.product.name,
+        price: Number(i.product.price),
+        quantity: i.quantity,
+      })),
+      courier: selectedCourier,
+      subtotal: totalPrice,
+      feeWebsite,
+      shippingFee: selectedCourier.price,
+      grossAmount: grandTotal,
+      status: "Menunggu Pembayaran",
+    });
+
+    saveOrderToLocalStorage(orderId);
 
     const phone = "6285233724944";
     const itemsList = cart
@@ -240,23 +287,23 @@ export default function CheckoutPage() {
         (item) =>
           `• ${item.product.name} (${item.quantity}x) = Rp ${(
             Number(item.product.price) * item.quantity
-          ).toLocaleString("id-ID")}`,
+          ).toLocaleString("id-ID")}`
       )
       .join("\n");
 
-    const message = `Halo Admin BarangBekas29, saya ingin memesan barang:\n\n*DATA PEMBELI:*\nNama: ${namaLengkap}\nWA: ${noWhatsApp}\nAlamat: ${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}\n\n*RINCIAN PESANAN:*\n${itemsList}\n\n*RINCIAN BIAYA:*\nSubtotal: Rp ${totalPrice.toLocaleString(
-      "id-ID",
+    const message = `Halo Admin BarangBekas29, saya ingin memesan barang [ID: ${orderId}]:\n\n*DATA PEMBELI:*\nNama: ${namaLengkap}\nWA: ${noWhatsApp}\nAlamat: ${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}\n\n*RINCIAN PESANAN:*\n${itemsList}\n\n*RINCIAN BIAYA:*\nSubtotal: Rp ${totalPrice.toLocaleString(
+      "id-ID"
     )}\nOngkir (${selectedCourier.name}): Rp ${selectedCourier.price.toLocaleString(
-      "id-ID",
+      "id-ID"
     )}\nBiaya Layanan: Rp ${feeWebsite.toLocaleString(
-      "id-ID",
+      "id-ID"
     )}\n*TOTAL BAYAR: Rp ${grandTotal.toLocaleString(
-      "id-ID",
+      "id-ID"
     )}*\n\nMohon petunjuk pembayarannya. Terima kasih!`;
 
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
-      "_blank",
+      "_blank"
     );
   };
 
