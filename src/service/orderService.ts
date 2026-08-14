@@ -5,7 +5,11 @@ import {
   setDoc,
   updateDoc,
   getDoc,
+  query,
+  orderBy,
+  onSnapshot,
   serverTimestamp,
+  Unsubscribe,
 } from "firebase/firestore";
 
 export interface OrderItem {
@@ -13,6 +17,7 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  image?: string;
 }
 
 export interface Order {
@@ -37,6 +42,8 @@ export interface Order {
   shippingFee: number;
   grossAmount: number;
   status: "Menunggu Pembayaran" | "Sudah Dibayar" | "Kadaluarsa" | "Batal" | "Pending";
+  packingStatus?: "Belum Dikemas" | "Sedang Dikemas" | "Sudah Dikemas" | "Dalam Pengiriman" | "Selesai";
+  resiNumber?: string;
   snapToken?: string;
   snapRedirectUrl?: string;
   createdAt?: any;
@@ -50,6 +57,7 @@ export async function createOrder(orderData: Order) {
   const docRef = doc(collection(db, "orders"), orderData.orderId);
   await setDoc(docRef, {
     ...orderData,
+    packingStatus: orderData.packingStatus || "Belum Dikemas",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -57,7 +65,7 @@ export async function createOrder(orderData: Order) {
 }
 
 /**
- * Update Status Pesanan di Firestore (e.g. dari Webhook Midtrans / Callback)
+ * Update Status Pesanan & Packing di Firestore
  */
 export async function updateOrderStatus(
   orderId: string,
@@ -73,6 +81,22 @@ export async function updateOrderStatus(
 }
 
 /**
+ * Update Status Pengemasan Barang oleh Admin / Sistem
+ */
+export async function updatePackingStatus(
+  orderId: string,
+  packingStatus: Order["packingStatus"],
+  resiNumber?: string
+) {
+  const docRef = doc(db, "orders", orderId);
+  await updateDoc(docRef, {
+    packingStatus,
+    ...(resiNumber ? { resiNumber } : {}),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
  * Ambil Detail Pesanan berdasarkan orderId
  */
 export async function getOrder(orderId: string) {
@@ -82,4 +106,28 @@ export async function getOrder(orderId: string) {
     return { id: snap.id, ...snap.data() } as Order;
   }
   return null;
+}
+
+/**
+ * Real-time listener untuk semua pesanan (diurutkan dari yang terbaru)
+ */
+export function subscribeToOrders(
+  onData: (orders: Order[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list = snapshot.docs.map((docItem) => ({
+        id: docItem.id,
+        ...docItem.data(),
+      })) as Order[];
+      onData(list);
+    },
+    (err) => {
+      console.error("Order Service Error:", err);
+      if (onError) onError(err);
+    }
+  );
 }
