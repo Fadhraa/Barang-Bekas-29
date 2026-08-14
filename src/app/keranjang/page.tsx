@@ -2,6 +2,8 @@
 
 import Navbar from "@/components/Navbar";
 import { useCart } from "@/context/cartContext";
+
+import { useRouter } from "next/navigation";
 import {
   ShoppingBag,
   Trash2,
@@ -14,6 +16,7 @@ import {
 import Link from "next/link";
 
 export default function KeranjangPage() {
+  const router = useRouter();
   const {
     cart,
     removeFromCart,
@@ -53,7 +56,7 @@ export default function KeranjangPage() {
           {cart.length > 0 && (
             <button
               onClick={clearCart}
-              className="text-xs font-semibold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-xl border border-red-200 transition-colors flex items-center gap-1.5"
+              className="text-xs font-semibold text-error hover:bg-error-50 px-3 py-1.5 rounded-xl border border-error-200 transition-colors flex items-center gap-1.5"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Kosongkan
@@ -71,7 +74,8 @@ export default function KeranjangPage() {
               Keranjang Belanja Anda Kosong
             </h2>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto mb-6 leading-relaxed">
-              Anda belum menambahkan barang bekas apapun. Jelajahi katalog pilihan barang bekas berkualitas kami sekarang.
+              Anda belum menambahkan barang bekas apapun. Jelajahi katalog
+              pilihan barang bekas berkualitas kami sekarang.
             </p>
             <Link
               href="/"
@@ -84,7 +88,6 @@ export default function KeranjangPage() {
         ) : (
           /* Layout Keranjang Ada Isi (2 Kolom di Desktop, 1 Kolom di Mobile) */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
             {/* Daftar Item Barang (2 Kolom Desktop) */}
             <div className="lg:col-span-2 space-y-3">
               {cart.map((item) => (
@@ -116,7 +119,8 @@ export default function KeranjangPage() {
                       {item.product.name}
                     </h3>
                     <p className="font-bold text-xs sm:text-sm text-slate-800 mt-1">
-                      Rp {Number(item.product.price || 0).toLocaleString("id-ID")}
+                      Rp{" "}
+                      {Number(item.product.price || 0).toLocaleString("id-ID")}
                     </p>
                   </div>
 
@@ -192,7 +196,7 @@ export default function KeranjangPage() {
 
                 {/* Tombol Checkout */}
                 <button
-                  onClick={() => alert("Proses Checkout QRIS")}
+                  onClick={() => router.push("/checkout")}
                   className="w-full py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 active:scale-[0.98] shadow-md transition-all flex items-center justify-center gap-2 mt-2"
                 >
                   <span>Lanjut ke Checkout</span>
@@ -205,7 +209,6 @@ export default function KeranjangPage() {
                 </div>
               </div>
             </div>
-
           </div>
         )}
       </main>
