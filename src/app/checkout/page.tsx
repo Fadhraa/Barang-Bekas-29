@@ -20,6 +20,7 @@ import {
   Building2,
   Wallet,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -37,13 +38,13 @@ export default function CheckoutPage() {
   // Loading state
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Form States untuk Data Pembeli & Alamat
+  // Form States untuk Data Pembeli & Alamat (Khusus Kabupaten Sampang)
   const [namaLengkap, setNamaLengkap] = useState("");
   const [noWhatsApp, setNoWhatsApp] = useState("");
   const [email, setEmail] = useState("");
   const [provinsi, setProvinsi] = useState("Jawa Timur");
-  const [kota, setKota] = useState("Surabaya");
-  const [kecamatan, setKecamatan] = useState("Wonokromo");
+  const [kota, setKota] = useState("Kabupaten Sampang");
+  const [kecamatan, setKecamatan] = useState("Sampang (Kota)");
   const [alamatLengkap, setAlamatLengkap] = useState("");
   const [catatan, setCatatan] = useState("");
 
@@ -94,12 +95,12 @@ export default function CheckoutPage() {
   const saveOrderToLocalStorage = (orderId: string) => {
     try {
       const existing = JSON.parse(
-        localStorage.getItem("barang_bekas_my_orders") || "[]"
+        localStorage.getItem("barang_bekas_my_orders") || "[]",
       );
       if (!existing.includes(orderId)) {
         localStorage.setItem(
           "barang_bekas_my_orders",
-          JSON.stringify([orderId, ...existing])
+          JSON.stringify([orderId, ...existing]),
         );
       }
     } catch (e) {
@@ -112,7 +113,7 @@ export default function CheckoutPage() {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
       showToast(
         "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error"
+        "error",
       );
       return;
     }
@@ -193,7 +194,7 @@ export default function CheckoutPage() {
 
       if (!res.ok || !data.token) {
         throw new Error(
-          data.error || "Gagal mendapatkan token transaksi Midtrans"
+          data.error || "Gagal mendapatkan token transaksi Midtrans",
         );
       }
 
@@ -209,7 +210,7 @@ export default function CheckoutPage() {
             clearCart();
             showToast(
               "Pembayaran Berhasil! Pesanan Anda sedang diproses.",
-              "success"
+              "success",
             );
             router.push("/pesanan");
           },
@@ -220,7 +221,7 @@ export default function CheckoutPage() {
             clearCart();
             showToast(
               "Pesanan dibuat! Silakan selesaikan pembayaran Anda.",
-              "info"
+              "info",
             );
             router.push("/pesanan");
           },
@@ -238,7 +239,7 @@ export default function CheckoutPage() {
       console.error("Payment Error:", err);
       showToast(
         err.message || "Terjadi kesalahan saat memproses pembayaran",
-        "error"
+        "error",
       );
       setIsProcessing(false);
     }
@@ -249,7 +250,7 @@ export default function CheckoutPage() {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
       showToast(
         "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error"
+        "error",
       );
       return;
     }
@@ -287,23 +288,23 @@ export default function CheckoutPage() {
         (item) =>
           `• ${item.product.name} (${item.quantity}x) = Rp ${(
             Number(item.product.price) * item.quantity
-          ).toLocaleString("id-ID")}`
+          ).toLocaleString("id-ID")}`,
       )
       .join("\n");
 
     const message = `Halo Admin BarangBekas29, saya ingin memesan barang [ID: ${orderId}]:\n\n*DATA PEMBELI:*\nNama: ${namaLengkap}\nWA: ${noWhatsApp}\nAlamat: ${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}\n\n*RINCIAN PESANAN:*\n${itemsList}\n\n*RINCIAN BIAYA:*\nSubtotal: Rp ${totalPrice.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}\nOngkir (${selectedCourier.name}): Rp ${selectedCourier.price.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}\nBiaya Layanan: Rp ${feeWebsite.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}\n*TOTAL BAYAR: Rp ${grandTotal.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}*\n\nMohon petunjuk pembayarannya. Terima kasih!`;
 
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
-      "_blank"
+      "_blank",
     );
   };
 
@@ -436,6 +437,25 @@ export default function CheckoutPage() {
                   <span>Alamat Pengiriman Paket</span>
                 </div>
 
+                {/* Banner Informasi Layanan Pengiriman Khusus Sampang */}
+                <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 flex items-start gap-3 text-xs text-amber-900">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-amber-900 text-xs">
+                      📍 Informasi Wilayah Layanan Pengiriman
+                    </p>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      Saat ini <strong>BarangBekas29</strong> hanya melayani
+                      pesanan dan pengiriman khusus untuk wilayah{" "}
+                      <strong>Kabupaten Sampang, Jawa Timur</strong>.
+                    </p>
+                    <p className="text-[10px] text-amber-700 font-semibold pt-0.5">
+                      🔔 Untuk pengiriman ke kota/kabupaten lain, mohon nantikan
+                      update perkembangan terbaru dari website kami!
+                    </p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">
@@ -447,10 +467,6 @@ export default function CheckoutPage() {
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
                     >
                       <option value="Jawa Timur">Jawa Timur</option>
-                      <option value="Jawa Barat">Jawa Barat</option>
-                      <option value="Jawa Tengah">Jawa Tengah</option>
-                      <option value="DKI Jakarta">DKI Jakarta</option>
-                      <option value="Lainnya">Provinsi Lainnya</option>
                     </select>
                   </div>
 
@@ -463,10 +479,9 @@ export default function CheckoutPage() {
                       onChange={(e) => setKota(e.target.value)}
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
                     >
-                      <option value="Surabaya">Surabaya</option>
-                      <option value="Malang">Malang</option>
-                      <option value="Sidoarjo">Sidoarjo</option>
-                      <option value="Lainnya">Kota Lainnya</option>
+                      <option value="Kabupaten Sampang">
+                        Kabupaten Sampang
+                      </option>
                     </select>
                   </div>
 
@@ -479,10 +494,19 @@ export default function CheckoutPage() {
                       onChange={(e) => setKecamatan(e.target.value)}
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
                     >
-                      <option value="Wonokromo">Wonokromo</option>
-                      <option value="Gubeng">Gubeng</option>
-                      <option value="Tegalsari">Tegalsari</option>
-                      <option value="Lainnya">Kecamatan Lainnya</option>
+                      <option value="Sampang (Kota)">Sampang (Kota)</option>
+                      <option value="Torjun">Torjun</option>
+                      <option value="Camplong">Camplong</option>
+                      <option value="Omben">Omben</option>
+                      <option value="Kedungdung">Kedungdung</option>
+                      <option value="Jantra">Jantra</option>
+                      <option value="Robatal">Robatal</option>
+                      <option value="Sokobanah">Sokobanah</option>
+                      <option value="Ketapang">Ketapang</option>
+                      <option value="Banyuates">Banyuates</option>
+                      <option value="Pangarengan">Pangarengan</option>
+                      <option value="Karang Penang">Karang Penang</option>
+                      <option value="Tambelangan">Tambelangan</option>
                     </select>
                   </div>
 
@@ -524,8 +548,15 @@ export default function CheckoutPage() {
                   <Truck className="w-4 h-4 text-primary" />
                   <span>Pilih Opsi Kurir Ekspedisi</span>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="border border-primary bg-primary/10 p-4 rounded-xl">
+                  <h3 className="font-rubik text-xs font-semibold text-primary mb-1">
+                    Pengiriman Saat ini akan menggunakan kurir lokal "GOSAKO"
+                  </h3>
+                  <span className="text-xs font-rubik text-slate-600">
+                    *Biaya Ongkir ditanggung oleh pembeli
+                  </span>
+                </div>
+                {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {couriers.map((courier) => (
                     <div
                       key={courier.id}
@@ -556,7 +587,7 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                   ))}
-                </div>
+                </div> */}
               </div>
 
               {/* 4. PILIH METODE PEMBAYARAN LANGSUNG DARI WEBSITE */}
@@ -665,12 +696,12 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  <div className="flex justify-between text-slate-600">
+                  {/* <div className="flex justify-between text-slate-600">
                     <span>Ongkos Kirim ({selectedCourier.name})</span>
                     <span className="font-semibold text-slate-800">
                       Rp {selectedCourier.price.toLocaleString("id-ID")}
                     </span>
-                  </div>
+                  </div> */}
 
                   <div className="flex justify-between text-slate-600">
                     <span>Biaya Layanan (0.5%)</span>
