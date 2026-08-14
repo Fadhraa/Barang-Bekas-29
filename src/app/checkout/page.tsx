@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useCart } from "@/context/cartContext";
 import { useToast } from "@/context/ToastContext";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
+import { createOrder, updateOrderStatus } from "@/service/orderService";
 import {
   ArrowLeft,
   User,
@@ -14,15 +16,26 @@ import {
   ShieldCheck,
   QrCode,
   MessageCircle,
-  FileText,
   CreditCard,
+  Building2,
+  Wallet,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
+
+declare global {
+  interface Window {
+    snap: any;
+  }
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const { cart, totalPrice, feeWebsite, totalAmount, clearCart } = useCart();
+
+  // Loading state
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Form States untuk Data Pembeli & Alamat
   const [namaLengkap, setNamaLengkap] = useState("");
@@ -34,7 +47,7 @@ export default function CheckoutPage() {
   const [alamatLengkap, setAlamatLengkap] = useState("");
   const [catatan, setCatatan] = useState("");
 
-  // Simulasi Pilihan Kurir Ekspedisi
+  // Pilihan Kurir Ekspedisi
   const [selectedCourier, setSelectedCourier] = useState({
     name: "SiCepat REG",
     price: 13000,
@@ -47,48 +60,197 @@ export default function CheckoutPage() {
     { id: "jne", name: "JNE REG", price: 14000, etd: "1-3 Hari" },
   ];
 
-  // Kalkulasi Total Pembayaran (Total Barang + Fee Website + Ongkir Kurir)
+  // State Pilihan Metode Pembayaran dari Website
+  const [paymentMethod, setPaymentMethod] = useState("qris");
+
+  const desktopPaymentCards = [
+    {
+      id: "qris",
+      title: "QRIS Instant",
+      description: "Scan QR via BCA, DANA, OVO, GoPay, ShopeePay",
+      badge: "Semua App / Bank",
+      icon: <QrCode className="w-4 h-4 text-emerald-600" />,
+    },
+    {
+      id: "va_all",
+      title: "Virtual Account",
+      description: "Transfer VA BCA, Mandiri, BNI, BRI, Permata",
+      badge: "Otomatis Cek",
+      icon: <Building2 className="w-4 h-4 text-blue-600" />,
+    },
+    {
+      id: "ewallet_all",
+      title: "E-Wallet",
+      description: "Bayar langsung via GoPay & ShopeePay",
+      badge: "Direct App",
+      icon: <Wallet className="w-4 h-4 text-amber-500" />,
+    },
+  ];
+
+  // Total Pembayaran (Barang + Fee Website + Ongkir Kurir)
   const grandTotal = totalAmount + selectedCourier.price;
 
-  // Handler Submit Pesanan (Frontend Dummy Action)
-  const handlePlaceOrder = (method: "qris" | "wa") => {
+  // Handler Submit Pembayaran via Midtrans Snap
+  const handleMidtransPayment = async () => {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
       showToast("Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!", "error");
       return;
     }
 
-    if (method === "wa") {
-      const phone = "6285233724944";
-      const itemsList = cart
-        .map(
-          (item) =>
-            `• ${item.product.name} (${item.quantity}x) = Rp ${(
-              Number(item.product.price) * item.quantity
-            ).toLocaleString("id-ID")}`
-        )
-        .join("\n");
+    setIsProcessing(true);
 
-      const message = `Halo Admin BarangBekas29, saya telah membuat pesanan baru:\n\n*DATA PEMBELI:*\nNama: ${namaLengkap}\nWA: ${noWhatsApp}\nAlamat: ${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}\n\n*RINCIAN PESANAN:*\n${itemsList}\n\n*RINCIAN BIAYA:*\nSubtotal: Rp ${totalPrice.toLocaleString(
-        "id-ID"
-      )}\nOngkir (${selectedCourier.name}): Rp ${selectedCourier.price.toLocaleString(
-        "id-ID"
-      )}\nBiaya Layanan: Rp ${feeWebsite.toLocaleString(
-        "id-ID"
-      )}\n*TOTAL BAYAR: Rp ${grandTotal.toLocaleString(
-        "id-ID"
-      )}*\n\nMohon informasi instruksi pembayarannya. Terima kasih!`;
+    try {
+      const orderId = `ORD-${Date.now()}`;
 
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
-      showToast("Mengarahkan ke WhatsApp Admin...", "info");
+      // 1. Format Item Rincian
+      const itemsPayload = [
+        ...cart.map((item) => ({
+          id: item.product.id.slice(0, 50),
+          price: Math.round(Number(item.product.price)),
+          quantity: item.quantity,
+          name: item.product.name.slice(0, 50),
+        })),
+        {
+          id: "shipping_fee",
+          price: selectedCourier.price,
+          quantity: 1,
+          name: `Ongkir (${selectedCourier.name})`.slice(0, 50),
+        },
+        {
+          id: "fee_website",
+          price: feeWebsite,
+          quantity: 1,
+          name: "Biaya Layanan Website (0.5%)",
+        },
+      ];
+
+      // 2. Simpan Dokumen Pesanan ke Firestore
+      await createOrder({
+        orderId,
+        customerName: namaLengkap,
+        customerPhone: noWhatsApp,
+        customerEmail: email,
+        address: alamatLengkap,
+        kecamatan,
+        kota,
+        provinsi,
+        notes: catatan,
+        items: cart.map((i) => ({
+          id: i.product.id,
+          name: i.product.name,
+          price: Number(i.product.price),
+          quantity: i.quantity,
+        })),
+        courier: selectedCourier,
+        subtotal: totalPrice,
+        feeWebsite,
+        shippingFee: selectedCourier.price,
+        grossAmount: grandTotal,
+        status: "Menunggu Pembayaran",
+      });
+
+      // 3. Minta Token Snap dari API Route Tokenizer membawa paymentMethod
+      const res = await fetch("/api/tokenizer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          grossAmount: grandTotal,
+          customerName: namaLengkap,
+          customerPhone: noWhatsApp,
+          customerEmail: email,
+          address: alamatLengkap,
+          kota,
+          paymentMethod,
+          items: itemsPayload,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.token) {
+        throw new Error(data.error || "Gagal mendapatkan token transaksi Midtrans");
+      }
+
+      setIsProcessing(false);
+
+      // 4. Buka Midtrans Snap Popup Window
+      if (window.snap) {
+        window.snap.pay(data.token, {
+          onSuccess: async function (result: any) {
+            await updateOrderStatus(orderId, "Sudah Dibayar", { paymentResult: result });
+            clearCart();
+            showToast("Pembayaran Berhasil! Pesanan Anda sedang diproses.", "success");
+            router.push("/pesanan");
+          },
+          onPending: async function (result: any) {
+            await updateOrderStatus(orderId, "Menunggu Pembayaran", { paymentResult: result });
+            clearCart();
+            showToast("Pesanan dibuat! Silakan selesaikan pembayaran Anda.", "info");
+            router.push("/pesanan");
+          },
+          onError: function (result: any) {
+            showToast("Pembayaran gagal atau dibatalkan.", "error");
+          },
+          onClose: function () {
+            showToast("Anda menutup popup pembayaran.", "info");
+          },
+        });
+      } else {
+        showToast("Snap SDK belum siap. Silakan coba lagi.", "error");
+      }
+    } catch (err: any) {
+      console.error("Payment Error:", err);
+      showToast(err.message || "Terjadi kesalahan saat memproses pembayaran", "error");
+      setIsProcessing(false);
+    }
+  };
+
+  // Handler Beli / Tanya via WhatsApp
+  const handleWhatsAppCheckout = () => {
+    if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
+      showToast("Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!", "error");
       return;
     }
 
-    // Modal / Alert Dummy untuk Pembayaran QRIS
-    showToast("Pesanan berhasil dibuat! Silakan scan QRIS untuk pembayaran.", "success");
+    const phone = "6285233724944";
+    const itemsList = cart
+      .map(
+        (item) =>
+          `• ${item.product.name} (${item.quantity}x) = Rp ${(
+            Number(item.product.price) * item.quantity
+          ).toLocaleString("id-ID")}`
+      )
+      .join("\n");
+
+    const message = `Halo Admin BarangBekas29, saya ingin memesan barang:\n\n*DATA PEMBELI:*\nNama: ${namaLengkap}\nWA: ${noWhatsApp}\nAlamat: ${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}\n\n*RINCIAN PESANAN:*\n${itemsList}\n\n*RINCIAN BIAYA:*\nSubtotal: Rp ${totalPrice.toLocaleString(
+      "id-ID"
+    )}\nOngkir (${selectedCourier.name}): Rp ${selectedCourier.price.toLocaleString(
+      "id-ID"
+    )}\nBiaya Layanan: Rp ${feeWebsite.toLocaleString(
+      "id-ID"
+    )}\n*TOTAL BAYAR: Rp ${grandTotal.toLocaleString(
+      "id-ID"
+    )}*\n\nMohon petunjuk pembayarannya. Terima kasih!`;
+
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   return (
     <div className="w-full min-h-screen bg-surface pb-24">
+      {/* Script External Midtrans Snap Sandbox */}
+      <Script
+        src={
+          process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ||
+          "https://app.sandbox.midtrans.com/snap/snap.js"
+        }
+        data-client-key={
+          process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ||
+          "SB-Mid-client-7v0L39m3qMRP8adc"
+        }
+        strategy="lazyOnload"
+      />
+
       {/* Header Halaman (TANPA NAVBAR - Hanya Tombol Kembali) */}
       <header className="w-full bg-white border-b border-slate-200/80 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -102,22 +264,22 @@ export default function CheckoutPage() {
             </Link>
             <div>
               <h1 className="text-lg font-bold text-slate-800 font-rubik">
-                Checkout Pesanan
+                Checkout & Pembayaran
               </h1>
               <p className="text-[11px] text-slate-500">
-                Lengkapi Data Pengiriman & Pilih Metode Pembayaran
+                Terintegrasi Midtrans Payment Gateway & Express Delivery
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60">
             <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">100% Transaksi Aman</span>
+            <span className="hidden sm:inline">Midtrans Sandbox Verified</span>
           </div>
         </div>
       </header>
 
-      {/* Konten Utama (2 Kolom Layout) */}
+      {/* Konten Utama */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
         {cart.length === 0 ? (
           <div className="bg-white rounded-3xl border border-slate-200/80 p-10 text-center shadow-xs my-8">
@@ -134,7 +296,7 @@ export default function CheckoutPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* KOLOM KIRI: Form Pembeli, Alamat & Kurir (2 Kolom) */}
+            {/* KOLOM KIRI: Form Pembeli, Alamat, Kurir & Metode Pembayaran (2 Kolom) */}
             <div className="lg:col-span-2 space-y-6">
               
               {/* 1. Informasi Pembeli */}
@@ -169,7 +331,7 @@ export default function CheckoutPage() {
                       <Phone className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
                       <input
                         type="tel"
-                        placeholder="Contoh: 081234567890"
+                        placeholder="Contoh: 085233724944"
                         value={noWhatsApp}
                         onChange={(e) => setNoWhatsApp(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
@@ -185,7 +347,7 @@ export default function CheckoutPage() {
                       <Mail className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
                       <input
                         type="email"
-                        placeholder="Contoh: nama@gmail.com"
+                        placeholder="Contoh: idolafadhra212@gmail.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
@@ -274,7 +436,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* 3. Simulasi Pilihan Ekspedisi Pengiriman */}
+              {/* 3. Pilihan Ekspedisi Pengiriman */}
               <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100 font-bold text-xs sm:text-sm text-slate-800 font-rubik">
                   <Truck className="w-4 h-4 text-primary" />
@@ -315,13 +477,83 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* 4. PILIH METODE PEMBAYARAN LANGSUNG DARI WEBSITE */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+                <div className="flex items-center gap-2 pb-2 border-b border-slate-100 font-bold text-xs sm:text-sm text-slate-800 font-rubik">
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  <span>Pilih Metode Pembayaran</span>
+                </div>
+
+                {/* A. DROPDOWN UNTUK HP (MOBILE ONLY: block sm:hidden) */}
+                <div className="block sm:hidden text-xs space-y-1.5">
+                  <label className="block font-semibold text-slate-700">
+                    Pilih Metode Pembayaran (HP)
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs font-semibold text-slate-800 cursor-pointer"
+                  >
+                    <option value="qris">QRIS Instant (Semua Bank & E-Wallet)</option>
+                    <option value="bca_va">Virtual Account BCA</option>
+                    <option value="mandiri_va">Virtual Account Mandiri</option>
+                    <option value="bni_va">Virtual Account BNI</option>
+                    <option value="bri_va">Virtual Account BRI</option>
+                    <option value="gopay">E-Wallet GoPay</option>
+                    <option value="shopeepay">E-Wallet ShopeePay</option>
+                  </select>
+                </div>
+
+                {/* B. CARD SELECT BOX UNTUK DESKTOP (DESKTOP ONLY: hidden sm:grid) */}
+                <div className="hidden sm:grid grid-cols-3 gap-3">
+                  {desktopPaymentCards.map((card) => (
+                    <div
+                      key={card.id}
+                      onClick={() => setPaymentMethod(card.id)}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
+                        paymentMethod === card.id
+                          ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30"
+                          : "border-slate-200 bg-white hover:border-slate-300"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {card.icon}
+                            <span className="font-bold text-xs text-slate-800">
+                              {card.title}
+                            </span>
+                          </div>
+                          <input
+                            type="radio"
+                            name="paymentMethodDesktop"
+                            checked={paymentMethod === card.id}
+                            onChange={() => setPaymentMethod(card.id)}
+                            className="text-primary focus:ring-primary h-3.5 w-3.5"
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-relaxed">
+                          {card.description}
+                        </p>
+                      </div>
+                      <span className="text-[9px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded self-start mt-3">
+                        {card.badge}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
-            {/* KOLOM KANAN: Ringkasan Pesanan & Pembayaran (1 Kolom) */}
+            {/* KOLOM KANAN: Ringkasan Pembayaran Midtrans (1 Kolom) */}
             <div className="space-y-4">
               <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 sticky top-20">
-                <h2 className="font-bold text-slate-800 text-sm font-rubik pb-2 border-b border-slate-100">
-                  Ringkasan Pembayaran
+                <h2 className="font-bold text-slate-800 text-sm font-rubik pb-2 border-b border-slate-100 flex items-center justify-between">
+                  <span>Ringkasan Pembayaran</span>
+                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                    Midtrans Snap
+                  </span>
                 </h2>
 
                 {/* Rincian Produk Singkat */}
@@ -369,40 +601,43 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Tampilan QRIS Statis Preview */}
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-2">
-                  <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-700">
-                    <QrCode className="w-4 h-4 text-primary" />
-                    <span>Pembayaran QRIS All-Payment</span>
+                {/* Info Metode Pembayaran Terpilih */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center space-y-1.5">
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-700">
+                    <CreditCard className="w-4 h-4 text-blue-600" />
+                    <span>Metode Terpilih: {paymentMethod.toUpperCase()}</span>
                   </div>
-                  <div className="w-28 h-28 bg-white border border-slate-200 rounded-lg mx-auto flex items-center justify-center p-2 shadow-xs">
-                    {/* Placeholder Gambar QRIS */}
-                    <div className="w-full h-full bg-slate-100 rounded flex flex-col items-center justify-center text-[9px] text-slate-400 font-mono">
-                      <span>[ QRIS CODE ]</span>
-                      <span className="text-[8px] text-slate-400 mt-1">Scan via BCA/DANA</span>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-500 leading-tight">
-                    Scan via GoPay, OVO, ShopeePay, DANA, BCA, atau M-Banking.
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    Pembayaran langsung terarah ke opsi pilihan Anda tanpa pusing memilih ulang.
                   </p>
                 </div>
 
                 {/* Tombol Action Utama */}
                 <div className="space-y-2 pt-1">
                   <button
-                    onClick={() => handlePlaceOrder("qris")}
-                    className="w-full py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 active:scale-[0.98] shadow-md transition-all flex items-center justify-center gap-2"
+                    onClick={handleMidtransPayment}
+                    disabled={isProcessing}
+                    className="w-full py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 active:scale-[0.98] shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
-                    <CreditCard className="w-4 h-4" />
-                    <span>Buat Pesanan & Bayar QRIS</span>
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Menyiapkan Payment...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-4 h-4" />
+                        <span>Buat Pesanan & Bayar (Midtrans)</span>
+                      </>
+                    )}
                   </button>
 
                   <button
-                    onClick={() => handlePlaceOrder("wa")}
-                    className="w-full py-2.5 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                    onClick={handleWhatsAppCheckout}
+                    className="w-full py-2.5 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>Konfirmasi via WhatsApp</span>
+                    <span>Beli Manual via WhatsApp</span>
                   </button>
                 </div>
 
