@@ -65,7 +65,7 @@ export async function createOrder(orderData: Order) {
 }
 
 /**
- * Update Status Pesanan & Packing di Firestore
+ * Update Status Pesanan & Packing di Firestore (Aman dari unhandled error)
  */
 export async function updateOrderStatus(
   orderId: string,
@@ -73,6 +73,13 @@ export async function updateOrderStatus(
   additionalData?: Record<string, any>
 ) {
   const docRef = doc(db, "orders", orderId);
+  const snap = await getDoc(docRef);
+
+  if (!snap.exists()) {
+    console.warn(`[OrderService] Dokumen pesanan ${orderId} tidak ditemukan di Firestore.`);
+    return;
+  }
+
   await updateDoc(docRef, {
     status,
     ...additionalData,
@@ -89,6 +96,13 @@ export async function updatePackingStatus(
   resiNumber?: string
 ) {
   const docRef = doc(db, "orders", orderId);
+  const snap = await getDoc(docRef);
+
+  if (!snap.exists()) {
+    console.warn(`[OrderService] Dokumen pesanan ${orderId} tidak ditemukan di Firestore.`);
+    return;
+  }
+
   await updateDoc(docRef, {
     packingStatus,
     ...(resiNumber ? { resiNumber } : {}),
