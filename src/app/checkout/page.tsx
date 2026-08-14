@@ -88,8 +88,8 @@ export default function CheckoutPage() {
     },
   ];
 
-  // Total Pembayaran (Barang + Fee Website + Ongkir Kurir)
-  const grandTotal = totalAmount + selectedCourier.price;
+  // Total Pembayaran (Barang + Fee Website + Ongkir Kurir) + selectedCourier.price
+  const grandTotal = totalAmount;
 
   // Helper Simpan ID Pesanan ke LocalStorage HP Pembeli
   const saveOrderToLocalStorage = (orderId: string) => {
