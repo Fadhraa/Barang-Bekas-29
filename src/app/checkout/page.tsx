@@ -168,6 +168,7 @@ export default function CheckoutPage() {
         shippingFee: selectedCourier.price,
         grossAmount: grandTotal,
         status: "Menunggu Pembayaran",
+        packingStatus: "Belum Dikemas",
       });
 
       // 3. Simpan ke LocalStorage HP Pembeli untuk Privasi
@@ -278,6 +279,7 @@ export default function CheckoutPage() {
       shippingFee: selectedCourier.price,
       grossAmount: grandTotal,
       status: "Menunggu Pembayaran",
+      packingStatus: "Belum Dikemas",
     });
 
     saveOrderToLocalStorage(orderId);

@@ -61,14 +61,17 @@ export default function Home() {
       showToast(`"${product.name}" telah ditambahkan ke keranjang!`, "success");
     }
   };
-  // Handler Beli / Tanya via WhatsApp
+  // Handler Beli / Tanya via WhatsApp (Sanitasi Nomor HP & Mencegah Popup Blocker)
   const handleBuyWhatsApp = (product: Product) => {
-    const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "628123456789";
+    let rawPhone =
+      process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "6285233724944";
+    let cleanPhone = String(rawPhone).replace(/[^0-9]/g, "");
+    if (cleanPhone.startsWith("0")) {
+      cleanPhone = "62" + cleanPhone.slice(1);
+    }
     const text = `Halo Admin BarangBekas29, saya berminat membeli produk:\n\n*${product.name}*\nHarga: Rp ${Number(product.price).toLocaleString("id-ID")}\nKategori: ${product.category}\n\nApakah barang ini masih tersedia?`;
-    window.open(
-      `https://wa.me/${phone}?text=${encodeURIComponent(text)}`,
-      "_blank",
-    );
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -287,16 +290,27 @@ export default function Home() {
               </div>
 
               {/* Tombol Beli / WhatsApp */}
-              <button
-                onClick={() => handleBuyWhatsApp(detailProduct)}
-                disabled={detailProduct.status === "Terjual"}
-                className="w-full py-3 bg-green-600 text-white font-bold text-xs rounded-xl hover:bg-green-700 active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-md"
-              >
-                <MessageCircle className="w-4 h-4" />
-                {detailProduct.status === "Terjual"
-                  ? "Produk Sudah Terjual"
-                  : "Beli / Tanya via WhatsApp"}
-              </button>
+              {detailProduct.status === "Terjual" ? (
+                <button
+                  disabled
+                  className="w-full py-3 bg-slate-400 text-white font-bold text-xs rounded-xl cursor-not-allowed mt-4 shadow-md flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Produk Sudah Terjual</span>
+                </button>
+              ) : (
+                <a
+                  href={`https://wa.me/6285233724944?text=${encodeURIComponent(
+                    `Halo Admin BarangBekas29, saya berminat membeli produk:\n\n*${detailProduct.name}*\nHarga: Rp ${Number(detailProduct.price).toLocaleString("id-ID")}\nKategori: ${detailProduct.category}\n\nApakah barang ini masih tersedia?`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 bg-green-600 text-white font-bold text-xs rounded-xl hover:bg-green-700 active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-4 shadow-md"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Beli / Tanya via WhatsApp</span>
+                </a>
+              )}
               <div
                 onClick={() => handleAddToCart(detailProduct)}
                 className="border border-darkPrimary text-primary flex items-center justify-center gap-2 py-3 rounded-xl hover:bg-darkPrimary hover:text-secondary transition duration-[500ms] cursor-pointer"
