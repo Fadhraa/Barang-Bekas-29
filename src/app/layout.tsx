@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { CartProvider } from "@/context/cartContext";
 import { ProductProvider } from "@/context/ProductContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,7 +35,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <ToastProvider>
           <ProductProvider>
-            <CartProvider>{children}</CartProvider>
+            <CartProvider>
+              {children}
+              <Analytics />
+              <SpeedInsights />
+            </CartProvider>
           </ProductProvider>
         </ToastProvider>
       </body>
