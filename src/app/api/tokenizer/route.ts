@@ -11,6 +11,7 @@ export async function POST(request: Request) {
       customerPhone,
       customerEmail,
       address,
+      paymentMethod, // Direct Selected Payment Method from UI (e.g. "bca_va", "qris", "gopay")
       items,
     } = body;
 
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PROVIDER || "ipaymu";
 
     console.log(
-      `Processing Payment Request for Order [${orderId}] using Provider: ${provider.toUpperCase()}`
+      `Processing Payment Request for Order [${orderId}] using Provider: ${provider.toUpperCase()}, Selected Method: [${paymentMethod || "all"}]`
     );
 
     // =========================================================================
@@ -34,7 +35,6 @@ export async function POST(request: Request) {
         process.env.API_KEY_SB_IPAYMU ||
         "SANDBOXE8A1D6B4-4947-4709-A268-4329A71B5536";
 
-      // Hapus semua tanda kutip ganda/tunggal dan spasi agar murni string murni
       const va = String(rawVa).replace(/['"]/g, "").replace(/[^0-9]/g, "").trim();
       const apiKey = String(rawApiKey).replace(/['"]/g, "").trim();
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
         request.headers.get("referer") ||
         "http://localhost:3000";
 
-      // 1. Format Payload Rincian Item (Sanitasi Karakter Khusus pada Nama Produk agar Signature 100% Identik)
+      // 1. Format Payload Rincian Item (Sanitasi Karakter Khusus pada Nama Produk)
       const productArray =
         items && Array.isArray(items) && items.length > 0
           ? items.map((i: any) =>
@@ -72,12 +72,25 @@ export async function POST(request: Request) {
             )
           : [Math.round(Number(grossAmount))];
 
-      // Sanitasi Nama Pembeli
       const cleanBuyerName = String(customerName || "Pembeli")
         .replace(/[^\w\s\-\.]/gi, "")
         .trim() || "Pembeli";
 
-      const payload = {
+      // Mapping Metode Pembayaran Pilihan ke Parameter iPaymu (paymentMethod & paymentChannel)
+      let ipaymuMethod: string | undefined = undefined;
+      let ipaymuChannel: string | undefined = undefined;
+
+      if (paymentMethod === "bca_va") { ipaymuMethod = "va"; ipaymuChannel = "bca"; }
+      else if (paymentMethod === "mandiri_va") { ipaymuMethod = "va"; ipaymuChannel = "mandiri"; }
+      else if (paymentMethod === "bni_va") { ipaymuMethod = "va"; ipaymuChannel = "bni"; }
+      else if (paymentMethod === "bri_va") { ipaymuMethod = "va"; ipaymuChannel = "bri"; }
+      else if (paymentMethod === "qris") { ipaymuMethod = "qris"; ipaymuChannel = "qris"; }
+      else if (paymentMethod === "gopay") { ipaymuMethod = "ewallet"; ipaymuChannel = "gopay"; }
+      else if (paymentMethod === "shopeepay") { ipaymuMethod = "ewallet"; ipaymuChannel = "shopeepay"; }
+      else if (paymentMethod === "va_all") { ipaymuMethod = "va"; }
+      else if (paymentMethod === "ewallet_all") { ipaymuMethod = "ewallet"; }
+
+      const payload: Record<string, any> = {
         product: productArray,
         qty: qtyArray,
         price: priceArray,
@@ -90,9 +103,12 @@ export async function POST(request: Request) {
         buyerEmail: customerEmail || "customer@barangbekas29.com",
       };
 
+      if (ipaymuMethod) payload.paymentMethod = ipaymuMethod;
+      if (ipaymuChannel) payload.paymentChannel = ipaymuChannel;
+
       const bodyString = JSON.stringify(payload);
 
-      // 2. Buat Hash SHA256 dari Body Request (Hex lowercase)
+      // 2. Buat Hash SHA256 dari Body Request
       const requestBodyHash = crypto
         .createHash("sha256")
         .update(bodyString)
@@ -107,7 +123,7 @@ export async function POST(request: Request) {
         .digest("hex")
         .toLowerCase();
 
-      console.log(`iPaymu Clean Debug -> VA: [${va}], Signature: [${signature}]`);
+      console.log(`iPaymu Debug -> VA: [${va}], Method: [${ipaymuMethod || "all"}], Channel: [${ipaymuChannel || "all"}]`);
 
       // 4. Tembak API iPaymu /api/v2/payment
       const response = await fetch(`${host}/api/v2/payment`, {
@@ -124,7 +140,6 @@ export async function POST(request: Request) {
       const data = await response.json();
       console.log("iPaymu Response Data Full:", JSON.stringify(data));
 
-      // Parsing Fleksibel untuk URL & SessionID iPaymu
       const paymentUrl =
         data.data?.Url ||
         data.Data?.Url ||
@@ -172,6 +187,39 @@ export async function POST(request: Request) {
       process.env.MIDTRANS_SERVER_KEY || "SB-Mid-server-ya6fFH8vsfyP8gET_HcYLN83";
     const authHeader = Buffer.from(`${serverKey}:`).toString("base64");
 
+    // Mapping Metode Pembayaran Pilihan ke parameter Midtrans `enabled_payments`
+    let enabledPayments: string[] | undefined = undefined;
+
+    if (paymentMethod === "bca_va") enabledPayments = ["bca_va"];
+    else if (paymentMethod === "mandiri_va") enabledPayments = ["echannel"];
+    else if (paymentMethod === "bni_va") enabledPayments = ["bni_va"];
+    else if (paymentMethod === "bri_va") enabledPayments = ["bri_va"];
+    else if (paymentMethod === "permata_va") enabledPayments = ["permata_va"];
+    else if (paymentMethod === "qris") enabledPayments = ["gopay", "other_qris", "shopeepay"];
+    else if (paymentMethod === "gopay") enabledPayments = ["gopay"];
+    else if (paymentMethod === "shopeepay") enabledPayments = ["shopeepay"];
+    else if (paymentMethod === "va_all") enabledPayments = ["bca_va", "echannel", "bni_va", "bri_va", "permata_va"];
+    else if (paymentMethod === "ewallet_all") enabledPayments = ["gopay", "shopeepay"];
+
+    const snapPayload: Record<string, any> = {
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: Math.round(Number(grossAmount)),
+      },
+      credit_card: { secure: true },
+      customer_details: {
+        first_name: customerName,
+        phone: customerPhone,
+        email: customerEmail,
+      },
+      item_details: items,
+    };
+
+    // Pasang enabled_payments jika pengguna memilih metode pembayaran spesifik
+    if (enabledPayments) {
+      snapPayload.enabled_payments = enabledPayments;
+    }
+
     const snapResponse = await fetch(
       "https://app.sandbox.midtrans.com/snap/v1/transactions",
       {
@@ -180,19 +228,7 @@ export async function POST(request: Request) {
           "Content-Type": "application/json",
           Authorization: `Basic ${authHeader}`,
         },
-        body: JSON.stringify({
-          transaction_details: {
-            order_id: orderId,
-            gross_amount: Math.round(Number(grossAmount)),
-          },
-          credit_card: { secure: true },
-          customer_details: {
-            first_name: customerName,
-            phone: customerPhone,
-            email: customerEmail,
-          },
-          item_details: items,
-        }),
+        body: JSON.stringify(snapPayload),
       }
     );
 

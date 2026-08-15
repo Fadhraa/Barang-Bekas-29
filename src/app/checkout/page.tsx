@@ -209,6 +209,7 @@ export default function CheckoutPage() {
           customerEmail: email,
           address: alamatLengkap,
           kota,
+          paymentMethod,
           items: itemsPayload,
         }),
       });
