@@ -9,6 +9,7 @@ import {
   onSnapshot,
   doc,
   addDoc,
+  runTransaction,
   updateDoc,
   deleteDoc,
   serverTimestamp,
@@ -16,6 +17,7 @@ import {
   QueryDocumentSnapshot,
   DocumentData,
 } from "firebase/firestore";
+import { updateStats } from "./statsService";
 
 export interface Product {
   id: string;
@@ -97,11 +99,15 @@ export function subscribeToProducts(
 
 // Add produk
 export async function createProduct(productData: Omit<Product, "id">) {
-  return await addDoc(collection(db, "products"), {
-    ...productData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  const [docRef] = await Promise.all([
+    addDoc(collection(db, "products"), {
+      ...productData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+    updateStats({ productAvailable: 1 }),
+  ]);
+  return docRef
 }
 
 // Update produk
@@ -119,5 +125,36 @@ export async function updateProduct(
 // Delete produk
 export async function deleteProduct(id: string) {
   const docRef = doc(db, "products", id);
+  await updateStats({productAvailable: -1})
   return await deleteDoc(docRef);
+}
+
+export async function  stockAtomic(productId: string, quantity:number) {
+  const productRef = doc(db, "products", productId);
+
+  return await runTransaction(db, async(transaction) =>{
+    const productDoc = await transaction.get(productRef);
+    if (!productDoc.exists()) {
+      throw new Error(`Produk dengan ID ${productId} tidak ditemukan.`);
+    }
+    const currentStock = Number(productDoc.data().stock || 0)
+    if(currentStock < quantity){
+        throw new Error(
+        `Stok produk "${productDoc.data().name}" tidak mencukupi (Sisa stok: ${currentStock}).`
+      );
+    }
+
+    const newStock = currentStock - quantity;
+    if (newStock === 0) {
+  await updateStats({ productAvailable: -1 });
+}
+    const newStatus = newStock  === 0 ? "Terjual" : "Tersedia";
+    transaction.update(productRef, {
+      stock: newStock,
+      status: newStatus,
+      updatedAt: new Date().toISOString(),
+    });
+    return { newStock, newStatus };
+    
+  })  
 }

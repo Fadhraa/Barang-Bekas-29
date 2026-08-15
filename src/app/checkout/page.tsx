@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useCart } from "@/context/cartContext";
 import { useToast } from "@/context/ToastContext";
 import { useRouter } from "next/navigation";
+import ConfirmationModal from "@/components/Confirmation_modal";
 import Script from "next/script";
 import { createOrder, updateOrderStatus } from "@/service/orderService";
 import {
@@ -47,6 +48,20 @@ export default function CheckoutPage() {
   const [kecamatan, setKecamatan] = useState("Sampang (Kota)");
   const [alamatLengkap, setAlamatLengkap] = useState("");
   const [catatan, setCatatan] = useState("");
+  // confirmation modal
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [actionType, setActionType] = useState<"midtrans" | "wa">("midtrans");
+  const triggerConfirmationModal = (type: "midtrans" | "wa") => {
+    if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
+      showToast(
+        "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
+        "error",
+      );
+      return;
+    }
+    setActionType(type);
+    setShowConfirmationModal(true);
+  };
 
   // Pilihan Kurir Ekspedisi
   const [selectedCourier, setSelectedCourier] = useState({
@@ -88,8 +103,8 @@ export default function CheckoutPage() {
     },
   ];
 
-  // Total Pembayaran (Barang + Fee Website + Ongkir Kurir) + selectedCourier.price
-  const grandTotal = totalAmount;
+  // Total Pembayaran (Barang + Fee Website + Ongkir Kurir)
+  const grandTotal = totalAmount + selectedCourier.price;
 
   // Helper Simpan ID Pesanan ke LocalStorage HP Pembeli
   const saveOrderToLocalStorage = (orderId: string) => {
@@ -123,7 +138,7 @@ export default function CheckoutPage() {
     try {
       const orderId = `ORD-${Date.now()}`;
 
-      // 1. Format Item Rincian
+      // 1. Format Item Rincian (Dibulatkan secara presisi)
       const itemsPayload = [
         ...cart.map((item) => ({
           id: item.product.id.slice(0, 50),
@@ -133,19 +148,25 @@ export default function CheckoutPage() {
         })),
         {
           id: "shipping_fee",
-          price: selectedCourier.price,
+          price: Math.round(selectedCourier.price),
           quantity: 1,
           name: `Ongkir (${selectedCourier.name})`.slice(0, 50),
         },
         {
           id: "fee_website",
-          price: feeWebsite,
+          price: Math.round(feeWebsite),
           quantity: 1,
           name: "Biaya Layanan Website (0.5%)",
         },
       ];
 
-      // 2. Simpan Dokumen Pesanan ke Firestore
+      // 2. Hitung jumlah persis item_details agar 100% selaras dengan grossAmount
+      const calculatedGrossAmount = itemsPayload.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
+
+      // 3. Simpan Dokumen Pesanan ke Firestore
       await createOrder({
         orderId,
         customerName: namaLengkap,
@@ -164,23 +185,23 @@ export default function CheckoutPage() {
         })),
         courier: selectedCourier,
         subtotal: totalPrice,
-        feeWebsite,
+        feeWebsite: Math.round(feeWebsite),
         shippingFee: selectedCourier.price,
-        grossAmount: grandTotal,
+        grossAmount: calculatedGrossAmount,
         status: "Menunggu Pembayaran",
         packingStatus: "Belum Dikemas",
       });
 
-      // 3. Simpan ke LocalStorage HP Pembeli untuk Privasi
+      // 4. Simpan ke LocalStorage HP Pembeli untuk Privasi
       saveOrderToLocalStorage(orderId);
 
-      // 4. Minta Token Snap dari API Route Tokenizer membawa paymentMethod
+      // 5. Minta Token Snap dari API Route Tokenizer membawa paymentMethod
       const res = await fetch("/api/tokenizer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId,
-          grossAmount: grandTotal,
+          grossAmount: calculatedGrossAmount,
           customerName: namaLengkap,
           customerPhone: noWhatsApp,
           customerEmail: email,
@@ -723,7 +744,7 @@ export default function CheckoutPage() {
                 {/* Tombol Action Utama */}
                 <div className="space-y-2 pt-1">
                   <button
-                    onClick={handleMidtransPayment}
+                    onClick={() => triggerConfirmationModal("midtrans")}
                     disabled={isProcessing}
                     className="w-full py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 active:scale-[0.98] shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
@@ -741,7 +762,7 @@ export default function CheckoutPage() {
                   </button>
 
                   <button
-                    onClick={handleWhatsAppCheckout}
+                    onClick={() => triggerConfirmationModal("wa")}
                     className="w-full py-2.5 bg-green-600 text-white text-xs font-bold rounded-xl hover:bg-green-700 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4" />
@@ -753,6 +774,25 @@ export default function CheckoutPage() {
           </div>
         )}
       </main>
+      <ConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => setShowConfirmationModal(false)}
+        onConfirm={() => {
+          if (actionType === "midtrans") {
+            handleMidtransPayment();
+          } else {
+            handleWhatsAppCheckout();
+          }
+        }}
+        title="Konfirmasi Data Pengiriman"
+        message="Mohon pastikan Nama, WhatsApp, dan Alamat Anda sudah benar agar tidak salah kirim."
+        dataSummary={{
+          nama: namaLengkap,
+          whatsapp: noWhatsApp,
+          email: email,
+          alamat: `${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}`,
+        }}
+      />
     </div>
   );
 }

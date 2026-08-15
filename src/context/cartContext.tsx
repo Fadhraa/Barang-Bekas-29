@@ -117,7 +117,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (sum, item) => sum + (Number(item.product.price) || 0) * item.quantity,
     0,
   );
-  const feeWebsite = totalPrice * 0.005;
+  const feeWebsite = Math.round(totalPrice * 0.005);
   const totalAmount = totalPrice + feeWebsite;
   return (
     <CartContext.Provider

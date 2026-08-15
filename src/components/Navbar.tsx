@@ -25,8 +25,10 @@ const CUSTOMER_ITEMS: NavItem[] = [
 
 // Menu Navigasi Admin (Pesanan, Produk, Transaksi)
 const ADMIN_ITEMS: NavItem[] = [
+  { label: "Dashboard", href: "/admin", icon: Home },
   { label: "Pesanan", href: "/admin/pesanan", icon: NotebookTabs },
   { label: "Produk", href: "/admin/produk", icon: Package },
+  { label: "Transaksi", href: "/admin/transaksi", icon: ReceiptText },
 ];
 
 interface NavbarProps {

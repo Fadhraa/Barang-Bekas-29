@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   Unsubscribe,
 } from "firebase/firestore";
+import { updateStats } from "./statsService";
 
 export interface OrderItem {
   id: string;
@@ -55,12 +56,15 @@ export interface Order {
  */
 export async function createOrder(orderData: Order) {
   const docRef = doc(collection(db, "orders"), orderData.orderId);
-  await setDoc(docRef, {
-    ...orderData,
-    packingStatus: orderData.packingStatus || "Belum Dikemas",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  await Promise.all([
+    setDoc(docRef, {
+      ...orderData,
+      packingStatus: orderData.packingStatus || "Belum Dikemas",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+    updateStats({ orderOnPacking: 1 }),
+  ]);
   return orderData.orderId;
 }
 
@@ -102,7 +106,12 @@ export async function updatePackingStatus(
     console.warn(`[OrderService] Dokumen pesanan ${orderId} tidak ditemukan di Firestore.`);
     return;
   }
-
+  const prevStatus = snap.data().packingStatus || "Belum Dikemas";
+  const wasOnPacking = prevStatus === "Belum Dikemas" || prevStatus === "Sedang Dikemas" || prevStatus === "Sudah Dikemas";
+  const isNowFinishedOrShipped = packingStatus === "Dalam Pengiriman" || packingStatus === "Selesai";
+  if (wasOnPacking && isNowFinishedOrShipped) {
+    await updateStats({ orderOnPacking: -1 });
+  }
   await updateDoc(docRef, {
     packingStatus,
     ...(resiNumber ? { resiNumber } : {}),

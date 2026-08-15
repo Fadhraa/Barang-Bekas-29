@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
-import { updateOrderStatus } from "@/service/orderService";
+import { getOrder, updateOrderStatus } from "@/service/orderService";
+import { stockAtomic } from "@/service/productService";
+import { updateStats } from "@/service/statsService";
 
 export async function POST(request: Request) {
   try {
@@ -47,10 +49,28 @@ export async function POST(request: Request) {
     if (order_id) {
       if (transaction_status === "capture" || transaction_status === "settlement") {
         if (fraud_status === "accept" || !fraud_status) {
-          await updateOrderStatus(order_id, "Sudah Dibayar", {
-            paymentType: payment_type,
-            paidAt: new Date().toISOString(),
-          });
+
+          const existingOrder = await getOrder(order_id)
+          if(existingOrder && existingOrder.status !== "Sudah Dibayar"){
+            await Promise.all([
+                updateOrderStatus(order_id, "Sudah Dibayar", {
+                  paymentType: payment_type,
+                  paidAt: new Date().toISOString(),
+                }),
+                updateStats({ totalRevenue: Number(gross_amount) }),
+              ]);
+            if(existingOrder.items && Array.isArray(existingOrder.items)){
+              for (const item of existingOrder.items){
+                try{
+                 
+                  await stockAtomic(item.id, item.quantity);
+                  console.log(`Stock berhasil dikurangi untuk produk: ${item.name} sejumlah ${item.quantity}`);
+                }catch(error){
+                  console.error(`Gagal mengurangi stok untuk produk ${item.name}:`, error);
+                }
+              }
+            }
+          }
         }
       } else if (transaction_status === "pending") {
         await updateOrderStatus(order_id, "Menunggu Pembayaran", { paymentType: payment_type });
