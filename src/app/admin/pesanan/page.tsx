@@ -244,7 +244,7 @@ export default function AdminPesananPage() {
                         {order.address}, {order.kecamatan}, {order.kota}, {order.provinsi}
                       </p>
                       <p className="font-bold text-primary pt-1">
-                        Kurir: {order.courier.name} (Rp {order.shippingFee.toLocaleString("id-ID")})
+                        Kurir: {order.courier?.name || "Lokal"} {order.shippingFee ? `(Rp ${order.shippingFee.toLocaleString("id-ID")})` : "(Bebas Ongkir)"}
                       </p>
                     </div>
                   </div>

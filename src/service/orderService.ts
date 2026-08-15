@@ -40,7 +40,7 @@ export interface Order {
   };
   subtotal: number;
   feeWebsite: number;
-  shippingFee: number;
+  shippingFee?: number;
   grossAmount: number;
   status: "Menunggu Pembayaran" | "Sudah Dibayar" | "Kadaluarsa" | "Batal" | "Pending";
   packingStatus?: "Belum Dikemas" | "Sedang Dikemas" | "Sudah Dikemas" | "Dalam Pengiriman" | "Selesai";

@@ -42,6 +42,11 @@ export default function PesananPage() {
   const [selectedFilter, setSelectedFilter] = useState("Semua");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Provider aktif: "ipaymu" atau "midtrans"
+  const activeProvider = (
+    process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PROVIDER || "ipaymu"
+  ).toLowerCase();
+
   // Baca ID Pesanan milik perangkat ini dari LocalStorage
   useEffect(() => {
     try {
@@ -80,13 +85,10 @@ export default function PesananPage() {
   ];
 
   // 🔒 LOGIKA PRIVASI PESANAN PEMBELI GUEST:
-  // 1. Jika ada kata kunci di Search Bar (e.g. No WA / ID Pesanan): Filter berdasarkan kata kunci tersebut.
-  // 2. Jika Search Bar Kosong: HANYA tampilkan pesanan yang dibuat dari HP/Browser ini (berdasarkan myOrderIds di localStorage).
   const filteredOrders = orders.filter((o) => {
     const cleanSearch = searchQuery.trim().toLowerCase();
 
     if (cleanSearch !== "") {
-      // Pembeli mengetikkan No WA atau ID Pesanan secara manual
       const matchesSearch =
         o.orderId.toLowerCase().includes(cleanSearch) ||
         o.customerPhone.replace(/[^0-9]/g, "").includes(cleanSearch) ||
@@ -94,11 +96,9 @@ export default function PesananPage() {
 
       if (!matchesSearch) return false;
     } else {
-      // Jika Search Bar Kosong: Filter HANYA pesanan milik perangkat ini (localStorage)
       if (myOrderIds.length > 0) {
         if (!myOrderIds.includes(o.orderId)) return false;
       } else {
-        // Jika belum ada pesanan di HP ini dan tidak ada pencarian manual: sembunyikan pesanan orang lain
         return false;
       }
     }
@@ -120,10 +120,29 @@ export default function PesananPage() {
     return true;
   });
 
-  // Handler Lanjutkan Pembayaran Midtrans Snap
+  // Handler Lanjutkan Pembayaran Fleksibel (iPaymu Redirect / Midtrans Snap)
   const handlePayNow = async (order: Order) => {
     try {
       showToast("Menyiapkan halaman pembayaran...", "info");
+      const itemsPayload = [
+        ...order.items.map((i) => ({
+          id: i.id.slice(0, 50),
+          price: Math.round(Number(i.price)),
+          quantity: i.quantity,
+          name: i.name.slice(0, 50),
+        })),
+        ...(order.feeWebsite && order.feeWebsite > 0
+          ? [
+              {
+                id: "fee_website",
+                price: Math.round(order.feeWebsite),
+                quantity: 1,
+                name: "Biaya Layanan Website (0.5%)",
+              },
+            ]
+          : []),
+      ];
+
       const res = await fetch("/api/tokenizer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,21 +154,27 @@ export default function PesananPage() {
           customerEmail: order.customerEmail,
           address: order.address,
           kota: order.kota,
-          items: order.items.map((i) => ({
-            id: i.id,
-            price: i.price,
-            quantity: i.quantity,
-            name: i.name,
-          })),
+          items: itemsPayload,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok || !data.token) {
-        throw new Error(data.error || "Gagal mendapatkan token Midtrans");
+
+      if (!res.ok || (!data.token && !data.paymentUrl)) {
+        throw new Error(
+          data.error || "Gagal mendapatkan URL / token transaksi pembayaran"
+        );
       }
 
-      if (window.snap) {
+      // A. Jika Provider iPaymu: Redirect ke URL Pembayaran iPaymu
+      if (data.provider === "ipaymu" && data.paymentUrl) {
+        showToast("Mengarahkan ke halaman pembayaran iPaymu...", "info");
+        window.location.href = data.paymentUrl;
+        return;
+      }
+
+      // B. Jika Provider Midtrans: Buka Midtrans Snap Popup Window
+      if (window.snap && data.token) {
         window.snap.pay(data.token, {
           onSuccess: async function (result: any) {
             await updateOrderStatus(order.orderId, "Sudah Dibayar", {
@@ -166,6 +191,7 @@ export default function PesananPage() {
         });
       }
     } catch (err: any) {
+      console.error("Payment Handler Error:", err);
       showToast(err.message || "Gagal memproses pembayaran", "error");
     }
   };
@@ -415,7 +441,13 @@ export default function PesananPage() {
 
                     <div className="sm:text-right space-y-1 self-end">
                       <div className="text-[11px] text-slate-500">
-                        Subtotal: Rp {order.subtotal.toLocaleString("id-ID")} • Ongkir: Rp {order.shippingFee.toLocaleString("id-ID")}
+                        Subtotal: Rp {order.subtotal.toLocaleString("id-ID")}{" "}
+                        {order.feeWebsite !== undefined && order.feeWebsite > 0
+                          ? `• Layanan: Rp ${order.feeWebsite.toLocaleString("id-ID")}`
+                          : ""}
+                        {order.shippingFee !== undefined && order.shippingFee > 0
+                          ? ` • Ongkir: Rp ${order.shippingFee.toLocaleString("id-ID")}`
+                          : ""}
                       </div>
                       <div className="flex sm:justify-end items-center gap-2">
                         <span className="font-bold text-xs text-slate-700">Total Pembayaran:</span>
@@ -426,7 +458,7 @@ export default function PesananPage() {
                     </div>
                   </div>
 
-                  {/* Footer Aksi Pesanan (Bayar Sekarang / Hubungi WA) */}
+                  {/* Footer Aksi Pesanan (Bayar Sekarang Fleksibel / Hubungi WA) */}
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                     {order.status === "Menunggu Pembayaran" && (
                       <button
@@ -434,7 +466,10 @@ export default function PesananPage() {
                         className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                       >
                         <CreditCard className="w-3.5 h-3.5" />
-                        <span>Bayar Sekarang (Midtrans)</span>
+                        <span>
+                          Bayar Sekarang (
+                          {activeProvider === "ipaymu" ? "iPaymu" : "Midtrans"})
+                        </span>
                       </button>
                     )}
 

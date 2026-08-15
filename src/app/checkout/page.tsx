@@ -48,14 +48,16 @@ export default function CheckoutPage() {
   const [kecamatan, setKecamatan] = useState("Sampang (Kota)");
   const [alamatLengkap, setAlamatLengkap] = useState("");
   const [catatan, setCatatan] = useState("");
-  // confirmation modal
+
+  // Modal Konfirmasi State
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [actionType, setActionType] = useState<"midtrans" | "wa">("midtrans");
-  const triggerConfirmationModal = (type: "midtrans" | "wa") => {
+  const [actionType, setActionType] = useState<"payment" | "wa">("payment");
+
+  const triggerConfirmationModal = (type: "payment" | "wa") => {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
       showToast(
         "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error",
+        "error"
       );
       return;
     }
@@ -63,17 +65,17 @@ export default function CheckoutPage() {
     setShowConfirmationModal(true);
   };
 
-  // Pilihan Kurir Ekspedisi
+  // Pilihan Kurir Ekspedisi (SISTEM ONGKIR DINONAKTIFKAN: price = 0)
   const [selectedCourier, setSelectedCourier] = useState({
     name: "SiCepat REG",
-    price: 13000,
+    price: 0, // 👈 [SISTEM ONGKIR DINONAKTIFKAN: Di-set 0 agar Bebas Ongkir]
     etd: "1-2 Hari",
   });
 
   const couriers = [
-    { id: "sicepat", name: "SiCepat REG", price: 13000, etd: "1-2 Hari" },
-    { id: "jnt", name: "J&T EZ", price: 15000, etd: "1-2 Hari" },
-    { id: "jne", name: "JNE REG", price: 14000, etd: "1-3 Hari" },
+    { id: "sicepat", name: "SiCepat REG", price: 0, etd: "1-2 Hari" }, // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
+    { id: "jnt", name: "J&T EZ", price: 0, etd: "1-2 Hari" },          // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
+    { id: "jne", name: "JNE REG", price: 0, etd: "1-3 Hari" },          // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
   ];
 
   // State Pilihan Metode Pembayaran dari Website
@@ -103,19 +105,20 @@ export default function CheckoutPage() {
     },
   ];
 
-  // Total Pembayaran (Barang + Fee Website + Ongkir Kurir)
-  const grandTotal = totalAmount + selectedCourier.price;
+  // Total Pembayaran (Barang + Fee Website)
+  // 👈 [SISTEM ONGKIR DINONAKTIFKAN: grandTotal = totalAmount (tanpa penambahan selectedCourier.price)]
+  const grandTotal = totalAmount;
 
-  // Helper Simpan ID Pesanan ke LocalStorage HP Pembeli
+  // Helper Simpan ID Pesanan ke LocalStorage HP Pembeli untuk Privasi
   const saveOrderToLocalStorage = (orderId: string) => {
     try {
       const existing = JSON.parse(
-        localStorage.getItem("barang_bekas_my_orders") || "[]",
+        localStorage.getItem("barang_bekas_my_orders") || "[]"
       );
       if (!existing.includes(orderId)) {
         localStorage.setItem(
           "barang_bekas_my_orders",
-          JSON.stringify([orderId, ...existing]),
+          JSON.stringify([orderId, ...existing])
         );
       }
     } catch (e) {
@@ -123,50 +126,49 @@ export default function CheckoutPage() {
     }
   };
 
-  // Handler Submit Pembayaran via Midtrans Snap
-  const handleMidtransPayment = async () => {
-    if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
-      showToast(
-        "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error",
-      );
-      return;
-    }
+  // Helper Persiapan Payload Pesanan
+  const prepareOrderPayload = () => {
+    const orderId = `ORD-${Date.now()}`;
+    const itemsPayload = [
+      ...cart.map((item) => ({
+        id: item.product.id.slice(0, 50),
+        price: Math.round(Number(item.product.price)),
+        quantity: item.quantity,
+        name: item.product.name.slice(0, 50),
+      })),
+      /* [SISTEM ONGKIR DINONAKTIFKAN: Item shipping_fee tidak dimasukkan ke payload payment gateway]
+      {
+        id: "shipping_fee",
+        price: Math.round(selectedCourier.price),
+        quantity: 1,
+        name: `Ongkir (${selectedCourier.name})`.slice(0, 50),
+      },
+      */
+      {
+        id: "fee_website",
+        price: Math.round(feeWebsite),
+        quantity: 1,
+        name: "Biaya Layanan Website (0.5%)",
+      },
+    ];
 
+    const calculatedGrossAmount = itemsPayload.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    return { orderId, itemsPayload, calculatedGrossAmount };
+  };
+
+  // =========================================================================
+  // 🅰️ FUNGSI KHUSUS PEMBAYARAN IPAYMU (DIRECT PAYMENT PAGE REDIRECT)
+  // =========================================================================
+  const handleIpaymuPayment = async () => {
     setIsProcessing(true);
-
     try {
-      const orderId = `ORD-${Date.now()}`;
+      const { orderId, itemsPayload, calculatedGrossAmount } = prepareOrderPayload();
 
-      // 1. Format Item Rincian (Dibulatkan secara presisi)
-      const itemsPayload = [
-        ...cart.map((item) => ({
-          id: item.product.id.slice(0, 50),
-          price: Math.round(Number(item.product.price)),
-          quantity: item.quantity,
-          name: item.product.name.slice(0, 50),
-        })),
-        {
-          id: "shipping_fee",
-          price: Math.round(selectedCourier.price),
-          quantity: 1,
-          name: `Ongkir (${selectedCourier.name})`.slice(0, 50),
-        },
-        {
-          id: "fee_website",
-          price: Math.round(feeWebsite),
-          quantity: 1,
-          name: "Biaya Layanan Website (0.5%)",
-        },
-      ];
-
-      // 2. Hitung jumlah persis item_details agar 100% selaras dengan grossAmount
-      const calculatedGrossAmount = itemsPayload.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      );
-
-      // 3. Simpan Dokumen Pesanan ke Firestore
+      // 1. Simpan Dokumen Pesanan ke Firestore
       await createOrder({
         orderId,
         customerName: namaLengkap,
@@ -186,16 +188,88 @@ export default function CheckoutPage() {
         courier: selectedCourier,
         subtotal: totalPrice,
         feeWebsite: Math.round(feeWebsite),
-        shippingFee: selectedCourier.price,
+        // shippingFee: selectedCourier.price, // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
         grossAmount: calculatedGrossAmount,
         status: "Menunggu Pembayaran",
         packingStatus: "Belum Dikemas",
       });
 
-      // 4. Simpan ke LocalStorage HP Pembeli untuk Privasi
+      // 2. Simpan ke LocalStorage HP Pembeli
       saveOrderToLocalStorage(orderId);
 
-      // 5. Minta Token Snap dari API Route Tokenizer membawa paymentMethod
+      // 3. Minta URL Pembayaran iPaymu dari API Route Tokenizer
+      const res = await fetch("/api/tokenizer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          grossAmount: calculatedGrossAmount,
+          customerName: namaLengkap,
+          customerPhone: noWhatsApp,
+          customerEmail: email,
+          address: alamatLengkap,
+          kota,
+          items: itemsPayload,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.paymentUrl) {
+        throw new Error(data.error || "Gagal mendapatkan URL transaksi iPaymu");
+      }
+
+      setIsProcessing(false);
+      clearCart();
+      showToast("Mengarahkan ke halaman pembayaran iPaymu...", "info");
+
+      // Redirect ke Halaman Pembayaran iPaymu Resmi
+      window.location.href = data.paymentUrl;
+    } catch (err: any) {
+      console.error("iPaymu Payment Error:", err);
+      showToast(err.message || "Gagal memproses pembayaran iPaymu", "error");
+      setIsProcessing(false);
+    }
+  };
+
+  // =========================================================================
+  // 🅱️ FUNGSI KHUSUS PEMBAYARAN MIDTRANS (SNAP POPUP MODAL)
+  // =========================================================================
+  const handleMidtransPayment = async () => {
+    setIsProcessing(true);
+    try {
+      const { orderId, itemsPayload, calculatedGrossAmount } = prepareOrderPayload();
+
+      // 1. Simpan Dokumen Pesanan ke Firestore
+      await createOrder({
+        orderId,
+        customerName: namaLengkap,
+        customerPhone: noWhatsApp,
+        customerEmail: email,
+        address: alamatLengkap,
+        kecamatan,
+        kota,
+        provinsi,
+        notes: catatan,
+        items: cart.map((i) => ({
+          id: i.product.id,
+          name: i.product.name,
+          price: Number(i.product.price),
+          quantity: i.quantity,
+        })),
+        courier: selectedCourier,
+        subtotal: totalPrice,
+        feeWebsite: Math.round(feeWebsite),
+        // shippingFee: selectedCourier.price, // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
+        grossAmount: calculatedGrossAmount,
+        status: "Menunggu Pembayaran",
+        packingStatus: "Belum Dikemas",
+      });
+
+      // 2. Simpan ke LocalStorage HP Pembeli
+      saveOrderToLocalStorage(orderId);
+
+      // 3. Minta Token Snap dari API Route Tokenizer
       const res = await fetch("/api/tokenizer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -215,14 +289,11 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok || !data.token) {
-        throw new Error(
-          data.error || "Gagal mendapatkan token transaksi Midtrans",
-        );
+        throw new Error(data.error || "Gagal mendapatkan token transaksi Midtrans");
       }
 
       setIsProcessing(false);
 
-      // 5. Buka Midtrans Snap Popup Window
       if (window.snap) {
         window.snap.pay(data.token, {
           onSuccess: async function (result: any) {
@@ -230,10 +301,7 @@ export default function CheckoutPage() {
               paymentResult: result,
             });
             clearCart();
-            showToast(
-              "Pembayaran Berhasil! Pesanan Anda sedang diproses.",
-              "success",
-            );
+            showToast("Pembayaran Berhasil! Pesanan Anda sedang diproses.", "success");
             router.push("/pesanan");
           },
           onPending: async function (result: any) {
@@ -241,39 +309,40 @@ export default function CheckoutPage() {
               paymentResult: result,
             });
             clearCart();
-            showToast(
-              "Pesanan dibuat! Silakan selesaikan pembayaran Anda.",
-              "info",
-            );
+            showToast("Pesanan dibuat! Silakan selesaikan pembayaran Anda.", "info");
             router.push("/pesanan");
           },
-          onError: function (result: any) {
+          onError: function () {
             showToast("Pembayaran gagal atau dibatalkan.", "error");
           },
           onClose: function () {
             showToast("Anda menutup popup pembayaran.", "info");
           },
         });
-      } else {
-        showToast("Snap SDK belum siap. Silakan coba lagi.", "error");
       }
     } catch (err: any) {
-      console.error("Payment Error:", err);
-      showToast(
-        err.message || "Terjadi kesalahan saat memproses pembayaran",
-        "error",
-      );
+      console.error("Midtrans Payment Error:", err);
+      showToast(err.message || "Gagal memproses pembayaran Midtrans", "error");
       setIsProcessing(false);
+    }
+  };
+
+  // =========================================================================
+  // 🔄 MASTER PAYMENT SWITCHER HANDLER
+  // =========================================================================
+  const handlePaymentSubmit = async () => {
+    const provider = process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PROVIDER || "ipaymu";
+    if (provider.toLowerCase() === "ipaymu") {
+      await handleIpaymuPayment();
+    } else {
+      await handleMidtransPayment();
     }
   };
 
   // Handler Beli / Tanya via WhatsApp
   const handleWhatsAppCheckout = async () => {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
-      showToast(
-        "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error",
-      );
+      showToast("Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!", "error");
       return;
     }
 
@@ -296,8 +365,8 @@ export default function CheckoutPage() {
       })),
       courier: selectedCourier,
       subtotal: totalPrice,
-      feeWebsite,
-      shippingFee: selectedCourier.price,
+      feeWebsite: Math.round(feeWebsite),
+      // shippingFee: selectedCourier.price, // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
       grossAmount: grandTotal,
       status: "Menunggu Pembayaran",
       packingStatus: "Belum Dikemas",
@@ -311,23 +380,21 @@ export default function CheckoutPage() {
         (item) =>
           `• ${item.product.name} (${item.quantity}x) = Rp ${(
             Number(item.product.price) * item.quantity
-          ).toLocaleString("id-ID")}`,
+          ).toLocaleString("id-ID")}`
       )
       .join("\n");
 
     const message = `Halo Admin BarangBekas29, saya ingin memesan barang [ID: ${orderId}]:\n\n*DATA PEMBELI:*\nNama: ${namaLengkap}\nWA: ${noWhatsApp}\nAlamat: ${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}\n\n*RINCIAN PESANAN:*\n${itemsList}\n\n*RINCIAN BIAYA:*\nSubtotal: Rp ${totalPrice.toLocaleString(
-      "id-ID",
-    )}\nOngkir (${selectedCourier.name}): Rp ${selectedCourier.price.toLocaleString(
-      "id-ID",
+      "id-ID"
     )}\nBiaya Layanan: Rp ${feeWebsite.toLocaleString(
-      "id-ID",
+      "id-ID"
     )}\n*TOTAL BAYAR: Rp ${grandTotal.toLocaleString(
-      "id-ID",
+      "id-ID"
     )}*\n\nMohon petunjuk pembayarannya. Terima kasih!`;
 
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
-      "_blank",
+      "_blank"
     );
   };
 
@@ -362,14 +429,14 @@ export default function CheckoutPage() {
                 Checkout & Pembayaran
               </h1>
               <p className="text-[11px] text-slate-500">
-                Terintegrasi Midtrans Payment Gateway & Express Delivery
+                Terintegrasi Payment Gateway & Express Delivery
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60">
             <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">Midtrans Sandbox Verified</span>
+            <span className="hidden sm:inline">iPaymu & Midtrans Verified</span>
           </div>
         </div>
       </header>
@@ -468,13 +535,10 @@ export default function CheckoutPage() {
                       📍 Informasi Wilayah Layanan Pengiriman
                     </p>
                     <p className="text-[11px] text-amber-800 leading-relaxed">
-                      Saat ini <strong>BarangBekas29</strong> hanya melayani
-                      pesanan dan pengiriman khusus untuk wilayah{" "}
-                      <strong>Kabupaten Sampang, Jawa Timur</strong>.
+                      Saat ini <strong>BarangBekas29</strong> hanya melayani pesanan dan pengiriman khusus untuk wilayah <strong>Kabupaten Sampang, Jawa Timur</strong>.
                     </p>
                     <p className="text-[10px] text-amber-700 font-semibold pt-0.5">
-                      🔔 Untuk pengiriman ke kota/kabupaten lain, mohon nantikan
-                      update perkembangan terbaru dari website kami!
+                      🔔 Untuk pengiriman ke kota/kabupaten lain, mohon nantikan update perkembangan terbaru dari website kami!
                     </p>
                   </div>
                 </div>
@@ -502,9 +566,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setKota(e.target.value)}
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
                     >
-                      <option value="Kabupaten Sampang">
-                        Kabupaten Sampang
-                      </option>
+                      <option value="Kabupaten Sampang">Kabupaten Sampang</option>
                     </select>
                   </div>
 
@@ -571,15 +633,8 @@ export default function CheckoutPage() {
                   <Truck className="w-4 h-4 text-primary" />
                   <span>Pilih Opsi Kurir Ekspedisi</span>
                 </div>
-                <div className="border border-primary bg-primary/10 p-4 rounded-xl">
-                  <h3 className="font-rubik text-xs font-semibold text-primary mb-1">
-                    Pengiriman Saat ini akan menggunakan kurir lokal "GOSAKO"
-                  </h3>
-                  <span className="text-xs font-rubik text-slate-600">
-                    *Biaya Ongkir ditanggung oleh pembeli
-                  </span>
-                </div>
-                {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {couriers.map((courier) => (
                     <div
                       key={courier.id}
@@ -605,12 +660,12 @@ export default function CheckoutPage() {
                       <span className="text-[10px] text-slate-500">
                         Estimasi: {courier.etd}
                       </span>
-                      <span className="font-bold text-xs text-primary mt-2">
-                        Rp {courier.price.toLocaleString("id-ID")}
+                      <span className="font-bold text-xs text-emerald-600 mt-2">
+                        Bebas Ongkir
                       </span>
                     </div>
                   ))}
-                </div> */}
+                </div>
               </div>
 
               {/* 4. PILIH METODE PEMBAYARAN LANGSUNG DARI WEBSITE */}
@@ -683,7 +738,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* KOLOM KANAN: Ringkasan Pembayaran Midtrans (1 Kolom) */}
+            {/* KOLOM KANAN: Ringkasan Pembayaran (1 Kolom) */}
             <div className="space-y-4">
               <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 sticky top-20">
                 <h2 className="font-bold text-slate-800 text-sm font-rubik pb-2 border-b border-slate-100 flex items-center justify-between">
@@ -719,12 +774,16 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  {/* <div className="flex justify-between text-slate-600">
+                  {/* 
+                    [SISTEM ONGKIR DINONAKTIFKAN]
+                    Baris Ongkos Kirim di-comment out agar tidak tampil di ringkasan pembayaran checkout
+                  <div className="flex justify-between text-slate-600">
                     <span>Ongkos Kirim ({selectedCourier.name})</span>
                     <span className="font-semibold text-slate-800">
                       Rp {selectedCourier.price.toLocaleString("id-ID")}
                     </span>
-                  </div> */}
+                  </div>
+                  */}
 
                   <div className="flex justify-between text-slate-600">
                     <span>Biaya Layanan (0.5%)</span>
@@ -744,7 +803,7 @@ export default function CheckoutPage() {
                 {/* Tombol Action Utama */}
                 <div className="space-y-2 pt-1">
                   <button
-                    onClick={() => triggerConfirmationModal("midtrans")}
+                    onClick={() => triggerConfirmationModal("payment")}
                     disabled={isProcessing}
                     className="w-full py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 active:scale-[0.98] shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
                   >
@@ -774,12 +833,13 @@ export default function CheckoutPage() {
           </div>
         )}
       </main>
+
       <ConfirmationModal
         isOpen={showConfirmationModal}
         onClose={() => setShowConfirmationModal(false)}
         onConfirm={() => {
-          if (actionType === "midtrans") {
-            handleMidtransPayment();
+          if (actionType === "payment") {
+            handlePaymentSubmit();
           } else {
             handleWhatsAppCheckout();
           }
