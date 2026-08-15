@@ -103,9 +103,9 @@ export default function KontakPage() {
               <p className="font-bold text-slate-800 text-sm mb-1">
                 Toko BarangBekas29 Official
               </p>
-              <p>Jl. Merdeka No. 29, Kota Indonesia</p>
+              <p>JL. Selong Square B 01, Sampang, Indonesia</p>
               <p className="text-slate-500 mt-1">
-                Kode Pos: 60000 • Jawa Timur, Indonesia
+                Jawa Timur, Indonesia
               </p>
             </div>
           </div>

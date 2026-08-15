@@ -62,7 +62,7 @@ export default function Footer() {
             <div className="space-y-1 text-slate-500 text-[11px]">
               <p className="flex items-start gap-1.5 leading-relaxed">
                 <MapPin className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-                <span>Jl. Merdeka No. 29, Jawa Timur, Indonesia</span>
+                <span>JL. Selong Square B 01, Sampang, Indonesia</span>
               </p>
             </div>
           </div>
