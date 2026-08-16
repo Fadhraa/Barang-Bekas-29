@@ -75,7 +75,7 @@ export default function Navbar({ items }: NavbarProps) {
     >
       {/* Brand Logo - Hanya muncul di Desktop (Kolom 1) */}
       <div className="hidden md:flex items-center">
-        <span className="font-serif text-lg font-bold tracking-tight text-white">
+        <span className="font-rubik text-lg font-bold tracking-tight text-white">
           {process.env.NEXT_PUBLIC_SHOP_NAME || "BarangBekas29"}
         </span>
       </div>
