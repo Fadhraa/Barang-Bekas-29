@@ -19,8 +19,36 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Barang Bekas 29",
-  description: "Toko Online Barang Bekas Pilihan",
+  title: "BarangBekas29 | Toko Online Barang Bekas Pilihan Sampang",
+  description:
+    "Platform belanja barang bekas pilihan yang berkualitas, jujur, dan terpercaya di Kabupaten Sampang.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://barangbekas29.com"
+  ),
+  openGraph: {
+    title: "BarangBekas29 | Toko Online Barang Bekas Pilihan Sampang",
+    description:
+      "Platform belanja barang bekas pilihan yang berkualitas, jujur, dan terpercaya di Kabupaten Sampang.",
+    url: "/",
+    siteName: "BarangBekas29",
+    locale: "id_ID",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "BarangBekas29 Preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BarangBekas29 | Toko Online Barang Bekas Pilihan Sampang",
+    description:
+      "Platform belanja barang bekas pilihan yang berkualitas, jujur, dan terpercaya di Kabupaten Sampang.",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
