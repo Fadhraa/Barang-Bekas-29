@@ -3,6 +3,8 @@
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import { useDashboardAdmin } from "@/hooks/useDashboardAdmin";
+import { useAuth } from "@/context/AuthContext";
+
 import {
   DollarSign,
   BoxIcon,
@@ -10,10 +12,11 @@ import {
   Package,
   Calendar,
   ShieldCheck,
+  LogOut,
 } from "lucide-react";
 export default function AdminPage() {
   const { stats, loading, refreshStats } = useDashboardAdmin();
-
+  const { user, logout } = useAuth();
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden bg-surface">
       {/* 1. Navbar tetap di atas */}
@@ -109,6 +112,15 @@ export default function AdminPage() {
               </Link>
             </div>
           </div>
+        </div>
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={logout}
+            className="flex items-center gap-2 px-4 py-2 bg-error text-white rounded-xl"
+          >
+            <LogOut className="w-5 h-5" />
+            Logout
+          </button>
         </div>
       </main>
     </div>

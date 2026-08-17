@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import {
   Home,
   NotebookTabs,
@@ -37,7 +38,7 @@ interface NavbarProps {
 
 export default function Navbar({ items }: NavbarProps) {
   const pathname = usePathname();
-
+  const { user, logout } = useAuth();
   // Otomatis aktifkan menu admin jika mengakses rute /admin atau jika props items diisi
   const isAdminRoute = pathname.startsWith("/admin");
   const navItems = items || (isAdminRoute ? ADMIN_ITEMS : CUSTOMER_ITEMS);
