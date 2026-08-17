@@ -9,6 +9,7 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  runTransaction,
   Unsubscribe,
 } from "firebase/firestore";
 import { updateStats } from "./statsService";
@@ -92,11 +93,62 @@ export async function updateOrderStatus(
     return;
   }
 
-  await updateDoc(docRef, {
-    status,
-    ...additionalData,
-    updatedAt: serverTimestamp(),
-  });
+  const orderData = snap.data() as Order;
+  const oldStatus = orderData.status;
+
+  // 🛍️ Jika status dikonfirmasi "Sudah Dibayar" dari status belum lunas
+  if (oldStatus !== "Sudah Dibayar" && status === "Sudah Dibayar") {
+    let soldOutCount = 0;
+
+    await runTransaction(db, async (transaction) => {
+      // 1. Kurangi stok setiap produk di Firestore
+      if (orderData.items && Array.isArray(orderData.items)) {
+        for (const item of orderData.items) {
+          if (item.id) {
+            const productRef = doc(db, "products", item.id);
+            const productSnap = await transaction.get(productRef);
+            if (productSnap.exists()) {
+              const currentStock = Number(productSnap.data()?.stock) || 0;
+              const newStock = Math.max(0, currentStock - (item.quantity || 1));
+              const newStatus = newStock <= 0 ? "Terjual" : "Tersedia";
+
+              if (currentStock > 0 && newStock <= 0) {
+                soldOutCount++;
+              }
+
+              transaction.update(productRef, {
+                stock: newStock,
+                status: newStatus,
+                updatedAt: serverTimestamp(),
+              });
+            }
+          }
+        }
+      }
+
+      // 2. Update status pesanan ke "Sudah Dibayar" & packingStatus ke "Sedang Dikemas"
+      transaction.update(docRef, {
+        status: "Sudah Dibayar",
+        packingStatus: orderData.packingStatus === "Belum Dikemas" ? "Sedang Dikemas" : (orderData.packingStatus || "Sedang Dikemas"),
+        ...additionalData,
+        updatedAt: serverTimestamp(),
+      });
+    });
+
+    // 3. Update statistik dashboard (total omzet & produk tersedia)
+    // NOTE: orderOnPacking TIDAK ditambah lagi di sini agar tidak double-count
+    await updateStats({
+      totalRevenue: Number(orderData.grossAmount) || 0,
+      ...(soldOutCount > 0 ? { productAvailable: -soldOutCount } : {}),
+    });
+  } else {
+    // Update status biasa (misal: Batal / Kadaluarsa)
+    await updateDoc(docRef, {
+      status,
+      ...additionalData,
+      updatedAt: serverTimestamp(),
+    });
+  }
 }
 
 /**

@@ -528,6 +528,25 @@ export default function PesananPage() {
 
                     <div className="flex items-center gap-2">
                       {order.status === "Menunggu Pembayaran" &&
+                        order.paymentMethod === "manual_transfer" &&
+                        (!order.expiredAt || Date.now() < order.expiredAt) && (
+                          <a
+                            href={`https://wa.me/6282338130007?text=${encodeURIComponent(
+                              `Halo Admin BarangBekas29, saya sudah melakukan transfer sebesar *Rp ${order.grossAmount.toLocaleString(
+                                "id-ID"
+                              )}* (Kode Unik: #${order.uniqueCode || ""}) via SeaBank untuk pesanan ID: *${order.orderId}*. Mohon verifikasi & konfirmasi pembayarannya. Terima kasih!`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-white" />
+                            <span>Konfirmasi Transfer WA</span>
+                          </a>
+                        )}
+
+                      {order.status === "Menunggu Pembayaran" &&
+                        order.paymentMethod !== "manual_transfer" &&
                         (!order.expiredAt || Date.now() < order.expiredAt) && (
                           <button
                             onClick={() => handlePayNow(order)}

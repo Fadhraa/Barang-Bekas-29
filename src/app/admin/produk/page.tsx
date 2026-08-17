@@ -140,12 +140,14 @@ export default function ProdukPage() {
 
                   <span
                     className={`absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold rounded-md shadow-xs ${
-                      item.status === "Tersedia"
+                      Number(item.stock) > 0 && item.status !== "Terjual"
                         ? "bg-green-600 text-white"
                         : "bg-red-600 text-white"
                     }`}
                   >
-                    {item.status || "Tersedia"}
+                    {Number(item.stock) > 0 && item.status !== "Terjual"
+                      ? "Tersedia"
+                      : "Terjual"}
                   </span>
                 </div>
 

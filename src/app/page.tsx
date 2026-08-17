@@ -164,12 +164,14 @@ export default function Home() {
                       {/* Badge Status */}
                       <span
                         className={`absolute top-2 right-2 px-2 py-0.5 text-[9px] font-bold rounded-md shadow-xs ${
-                          product.status === "Tersedia"
+                          Number(product.stock) > 0 && product.status !== "Terjual"
                             ? "bg-green-600 text-white"
                             : "bg-red-600 text-white"
                         }`}
                       >
-                        {product.status || "Tersedia"}
+                        {Number(product.stock) > 0 && product.status !== "Terjual"
+                          ? "Tersedia"
+                          : "Terjual"}
                       </span>
                     </div>
 
