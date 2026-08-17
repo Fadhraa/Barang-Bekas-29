@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   description:
     "Platform belanja barang bekas pilihan yang berkualitas, jujur, dan terpercaya di Kabupaten Sampang.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://barangbekas29.com"
+    process.env.NEXT_PUBLIC_SITE_URL || "https://barang-bekas-29.vercel.app"
   ),
   verification: {
     google: "googlecc138d4ec8ad394e",
@@ -32,13 +32,13 @@ export const metadata: Metadata = {
     title: "BarangBekas29 | Toko Online Barang Bekas Pilihan Sampang",
     description:
       "Platform belanja barang bekas pilihan yang berkualitas, jujur, dan terpercaya di Kabupaten Sampang.",
-    url: "/",
+    url: "https://barang-bekas-29.vercel.app",
     siteName: "BarangBekas29",
     locale: "id_ID",
     type: "website",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://barang-bekas-29.vercel.app/og-image.png",
         width: 1200,
         height: 630,
         alt: "BarangBekas29 Preview",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     title: "BarangBekas29 | Toko Online Barang Bekas Pilihan Sampang",
     description:
       "Platform belanja barang bekas pilihan yang berkualitas, jujur, dan terpercaya di Kabupaten Sampang.",
-    images: ["/og-image.png"],
+    images: ["https://barang-bekas-29.vercel.app/og-image.png"],
   },
 };
 
