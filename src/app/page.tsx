@@ -63,7 +63,7 @@ export default function Home() {
   };
   // Handler Beli / Tanya via WhatsApp (Sanitasi Nomor HP & Mencegah Popup Blocker)
   const handleBuyWhatsApp = (product: Product) => {
-    let rawPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "6285233724944";
+    let rawPhone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "6282338130007";
     let cleanPhone = String(rawPhone).replace(/[^0-9]/g, "");
     if (cleanPhone.startsWith("0")) {
       cleanPhone = "62" + cleanPhone.slice(1);
@@ -299,7 +299,7 @@ export default function Home() {
                 </button>
               ) : (
                 <a
-                  href={`https://wa.me/6285233724944?text=${encodeURIComponent(
+                  href={`https://wa.me/6282338130007?text=${encodeURIComponent(
                     `Halo Admin BarangBekas29, saya berminat membeli produk:\n\n*${detailProduct.name}*\nHarga: Rp ${Number(detailProduct.price).toLocaleString("id-ID")}\nKategori: ${detailProduct.category}\n\nApakah barang ini masih tersedia?`,
                   )}`}
                   target="_blank"

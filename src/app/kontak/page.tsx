@@ -6,7 +6,7 @@ import { Mail, Phone, MapPin, MessageSquare, Clock, ArrowLeft } from "lucide-rea
 import Link from "next/link";
 
 export default function KontakPage() {
-  const whatsappNumber = "085233724944";
+  const whatsappNumber = "082338130007";
   const emailAddress = "idolafadhra212@gmail.com";
 
   return (
@@ -36,7 +36,7 @@ export default function KontakPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {/* Kartu WhatsApp */}
             <a
-              href={`https://wa.me/6285233724944?text=${encodeURIComponent(
+              href={`https://wa.me/6282338130007?text=${encodeURIComponent(
                 "Halo Admin BarangBekas29, saya ingin bertanya seputar produk/pesanan."
               )}`}
               target="_blank"

@@ -65,7 +65,7 @@ export default function KebijakanRefundPage() {
 
             <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-slate-500 text-[11px]">
               <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>Untuk bantuan klaim refund, hubungi WhatsApp: 085233724944</span>
+              <span>Untuk bantuan klaim refund, hubungi WhatsApp: 082338130007</span>
             </div>
           </div>
         </main>

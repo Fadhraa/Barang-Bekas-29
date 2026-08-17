@@ -47,6 +47,14 @@ export interface Order {
   resiNumber?: string;
   snapToken?: string;
   snapRedirectUrl?: string;
+  expiredAt?: number; // Timestamp Unix ms batas waktu 15 menit pembayaran
+  paymentMethod?: string;
+  uniqueCode?: number;
+  bankDetails?: {
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+  };
   createdAt?: any;
   updatedAt?: any;
 }

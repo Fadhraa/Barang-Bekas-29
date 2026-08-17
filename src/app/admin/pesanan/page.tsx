@@ -23,6 +23,7 @@ import {
   Send,
   Edit3,
   ChevronLeft,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -248,6 +249,25 @@ export default function AdminPesananPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Highlight Transfer Manual SeaBank jika ada */}
+                  {order.paymentMethod === "manual_transfer" && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-bold text-blue-900 text-xs">
+                        🏦 Transfer Manual SeaBank (Kode Unik: #{order.uniqueCode || "0"})
+                      </span>
+                      {order.status === "Menunggu Pembayaran" && (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePayment(order.orderId, "Sudah Dibayar")}
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-xs transition-all cursor-pointer flex items-center gap-1"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Konfirmasi Pembayaran Lunas</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Panel Pengaturan Status (Pembayaran & Pengemasan) */}
                   <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-slate-50/50 p-4 rounded-xl border border-slate-100">

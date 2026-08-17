@@ -180,7 +180,7 @@ export default function KeranjangPage() {
                   </div>
 
                   <div className="flex justify-between text-slate-600">
-                    <span>Biaya Layanan (0.5%)</span>
+                    <span>Biaya Layanan Website</span>
                     <span className="font-semibold text-slate-800">
                       Rp {feeWebsite.toLocaleString("id-ID")}
                     </span>

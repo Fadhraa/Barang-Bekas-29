@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useCart } from "@/context/cartContext";
 import { useToast } from "@/context/ToastContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ConfirmationModal from "@/components/Confirmation_modal";
 import Script from "next/script";
 import { createOrder, updateOrderStatus } from "@/service/orderService";
@@ -22,6 +22,10 @@ import {
   Wallet,
   Loader2,
   AlertCircle,
+  Bike,
+  Info,
+  Copy,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -31,7 +35,7 @@ declare global {
   }
 }
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
   const { showToast } = useToast();
   const { cart, totalPrice, feeWebsite, totalAmount, clearCart } = useCart();
@@ -65,49 +69,62 @@ export default function CheckoutPage() {
     setShowConfirmationModal(true);
   };
 
-  // Pilihan Kurir Ekspedisi (SISTEM ONGKIR DINONAKTIFKAN: price = 0)
-  const [selectedCourier, setSelectedCourier] = useState({
-    name: "SiCepat REG",
-    price: 0, // 👈 [SISTEM ONGKIR DINONAKTIFKAN: Di-set 0 agar Bebas Ongkir]
-    etd: "1-2 Hari",
+  // Pilihan Pengiriman Kurir Lokal (Gosako / Djontor)
+  const [selectedCourier] = useState({
+    name: "Ojek Lokal (Gosako / Djontor)",
+    price: 0, // 👈 [ONGKIR DITANGGUNG PEMBELI DI TEMPAT]
+    etd: "Hari Ini",
   });
 
-  const couriers = [
-    { id: "sicepat", name: "SiCepat REG", price: 0, etd: "1-2 Hari" }, // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
-    { id: "jnt", name: "J&T EZ", price: 0, etd: "1-2 Hari" },          // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
-    { id: "jne", name: "JNE REG", price: 0, etd: "1-3 Hari" },          // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
-  ];
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode");
+  const test = searchParams.get("test");
+  const isTestingMode = mode === "testing" || mode === "sandbox" || test === "ipaymu" || test === "midtrans";
 
-  // State Pilihan Metode Pembayaran dari Website
-  const [paymentMethod, setPaymentMethod] = useState("qris");
+  // Kode unik 3 digit acak per transaksi manual
+  const [uniqueCode] = useState(() => Math.floor(Math.random() * 899) + 100);
+
+  // State Pilihan Metode Pembayaran (Default: Transfer Bank Manual SeaBank)
+  const [paymentMethod, setPaymentMethod] = useState("manual_transfer");
 
   const desktopPaymentCards = [
     {
-      id: "qris",
-      title: "QRIS Instant",
-      description: "Scan QR via BCA, DANA, OVO, GoPay, ShopeePay",
-      badge: "Semua App / Bank",
-      icon: <QrCode className="w-4 h-4 text-emerald-600" />,
+      id: "manual_transfer",
+      title: "Transfer Bank Manual",
+      description: "Transfer SeaBank (Kode Unik Otomatis)",
+      badge: "Rekomendasi Utama",
+      icon: <Building2 className="w-4 h-4 text-emerald-600" />,
     },
-    {
-      id: "va_all",
-      title: "Virtual Account",
-      description: "Transfer VA BCA, Mandiri, BNI, BRI, Permata",
-      badge: "Otomatis Cek",
-      icon: <Building2 className="w-4 h-4 text-blue-600" />,
-    },
-    {
-      id: "ewallet_all",
-      title: "E-Wallet",
-      description: "Bayar langsung via GoPay & ShopeePay",
-      badge: "Direct App",
-      icon: <Wallet className="w-4 h-4 text-amber-500" />,
-    },
+    ...(isTestingMode
+      ? [
+          {
+            id: "qris",
+            title: "QRIS Instant (Sandbox)",
+            description: "Scan QR via BCA, DANA, OVO, GoPay, ShopeePay",
+            badge: "Mode Verifikasi",
+            icon: <QrCode className="w-4 h-4 text-blue-600" />,
+          },
+          {
+            id: "va_all",
+            title: "Virtual Account (Sandbox)",
+            description: "Transfer VA BCA, Mandiri, BNI, BRI, Permata",
+            badge: "Mode Verifikasi",
+            icon: <Building2 className="w-4 h-4 text-blue-600" />,
+          },
+          {
+            id: "ewallet_all",
+            title: "E-Wallet (Sandbox)",
+            description: "Bayar langsung via GoPay & ShopeePay",
+            badge: "Mode Verifikasi",
+            icon: <Wallet className="w-4 h-4 text-amber-500" />,
+          },
+        ]
+      : []),
   ];
 
-  // Total Pembayaran (Barang + Fee Website)
-  // 👈 [SISTEM ONGKIR DINONAKTIFKAN: grandTotal = totalAmount (tanpa penambahan selectedCourier.price)]
+  // Total Pembayaran (Barang + Fee Website + Kode Unik untuk Transfer Manual)
   const grandTotal = totalAmount;
+  const finalTransferAmount = paymentMethod === "manual_transfer" ? grandTotal + uniqueCode : grandTotal;
 
   // Helper Simpan ID Pesanan ke LocalStorage HP Pembeli untuk Privasi
   const saveOrderToLocalStorage = (orderId: string) => {
@@ -148,7 +165,7 @@ export default function CheckoutPage() {
         id: "fee_website",
         price: Math.round(feeWebsite),
         quantity: 1,
-        name: "Biaya Layanan Website (0.5%)",
+        name: "Biaya Layanan Website",
       },
     ];
 
@@ -192,6 +209,7 @@ export default function CheckoutPage() {
         grossAmount: calculatedGrossAmount,
         status: "Menunggu Pembayaran",
         packingStatus: "Belum Dikemas",
+        expiredAt: Date.now() + 15 * 60 * 1000,
       });
 
       // 2. Simpan ke LocalStorage HP Pembeli
@@ -265,6 +283,7 @@ export default function CheckoutPage() {
         grossAmount: calculatedGrossAmount,
         status: "Menunggu Pembayaran",
         packingStatus: "Belum Dikemas",
+        expiredAt: Date.now() + 15 * 60 * 1000,
       });
 
       // 2. Simpan ke LocalStorage HP Pembeli
@@ -328,10 +347,64 @@ export default function CheckoutPage() {
     }
   };
 
+  // Handler Pembayaran Transfer Bank Manual (SeaBank)
+  const handleManualTransferPayment = async () => {
+    setIsProcessing(true);
+    try {
+      const orderId = `ORD-${Date.now()}`;
+
+      await createOrder({
+        orderId,
+        customerName: namaLengkap,
+        customerPhone: noWhatsApp,
+        customerEmail: email,
+        address: alamatLengkap,
+        kecamatan,
+        kota,
+        provinsi,
+        notes: catatan,
+        items: cart.map((i) => ({
+          id: i.product.id,
+          name: i.product.name,
+          price: Number(i.product.price),
+          quantity: i.quantity,
+        })),
+        courier: selectedCourier,
+        subtotal: totalPrice,
+        feeWebsite: Math.round(feeWebsite),
+        grossAmount: finalTransferAmount,
+        paymentMethod: "manual_transfer",
+        uniqueCode: uniqueCode,
+        bankDetails: {
+          bankName: "SeaBank",
+          accountNumber: "901308488803",
+          accountHolder: "R Nurul Hidayati Hasyiani",
+        },
+        status: "Menunggu Pembayaran",
+        packingStatus: "Belum Dikemas",
+        expiredAt: Date.now() + 15 * 60 * 1000,
+      });
+
+      saveOrderToLocalStorage(orderId);
+      clearCart();
+      showToast("Pesanan berhasil dibuat! Silakan lakukan transfer.", "success");
+      setIsProcessing(false);
+      router.push("/pesanan");
+    } catch (err: any) {
+      console.error("Gagal membuat pesanan manual:", err);
+      showToast(err.message || "Gagal membuat pesanan", "error");
+      setIsProcessing(false);
+    }
+  };
+
   // =========================================================================
   // 🔄 MASTER PAYMENT SWITCHER HANDLER
   // =========================================================================
   const handlePaymentSubmit = async () => {
+    if (paymentMethod === "manual_transfer") {
+      await handleManualTransferPayment();
+      return;
+    }
     const provider = process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PROVIDER || "ipaymu";
     if (provider.toLowerCase() === "ipaymu") {
       await handleIpaymuPayment();
@@ -375,7 +448,7 @@ export default function CheckoutPage() {
 
     saveOrderToLocalStorage(orderId);
 
-    const phone = "6285233724944";
+    const phone = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "6282338130007";
     const itemsList = cart
       .map(
         (item) =>
@@ -492,7 +565,7 @@ export default function CheckoutPage() {
                       <Phone className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
                       <input
                         type="tel"
-                        placeholder="Contoh: 085233724944"
+                        placeholder="Contoh: 082338130007"
                         value={noWhatsApp}
                         onChange={(e) => setNoWhatsApp(e.target.value)}
                         className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
@@ -628,44 +701,27 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* 3. Pilihan Ekspedisi Pengiriman */}
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+              {/* 3. Opsi Pengiriman Kurir Lokal (Gosako / Djontor) */}
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3">
                 <div className="flex items-center gap-2 pb-2 border-b border-slate-100 font-bold text-xs sm:text-sm text-slate-800 font-rubik">
                   <Truck className="w-4 h-4 text-primary" />
-                  <span>Pilih Opsi Kurir Ekspedisi</span>
+                  <span>Metode Pengiriman Paket</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {couriers.map((courier) => (
-                    <div
-                      key={courier.id}
-                      onClick={() => setSelectedCourier(courier)}
-                      className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between ${
-                        selectedCourier.name === courier.name
-                          ? "border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30"
-                          : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-xs text-slate-800">
-                          {courier.name}
-                        </span>
-                        <input
-                          type="radio"
-                          name="courier"
-                          checked={selectedCourier.name === courier.name}
-                          onChange={() => setSelectedCourier(courier)}
-                          className="text-primary focus:ring-primary h-3.5 w-3.5"
-                        />
-                      </div>
-                      <span className="text-[10px] text-slate-500">
-                        Estimasi: {courier.etd}
-                      </span>
-                      <span className="font-bold text-xs text-emerald-600 mt-2">
-                        Bebas Ongkir
-                      </span>
-                    </div>
-                  ))}
+                <div className="p-4 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl space-y-2.5">
+                  <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs sm:text-sm font-rubik">
+                    <Bike className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Pengiriman via Ojek Lokal (Gosako / Djontor)</span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Pengiriman pesanan Anda khusus wilayah Kabupaten Sampang akan dikirimkan langsung menggunakan mitra ekspedisi/ojek lokal (<strong>Gosako</strong> / <strong>Djontor</strong>).
+                  </p>
+
+                  <div className="pt-2 border-t border-emerald-200/60 flex items-start gap-1.5 text-[11px] font-bold text-amber-800">
+                    <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 mt-0.5" />
+                    <span>Catatan: Biaya ongkos kirim (ongkir) ditanggung penuh oleh pembeli saat paket diterima di tempat (COD Ongkir).</span>
+                  </div>
                 </div>
               </div>
 
@@ -686,20 +742,27 @@ export default function CheckoutPage() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs font-semibold text-slate-800 cursor-pointer"
                   >
-                    <option value="qris">
-                      QRIS Instant (Semua Bank & E-Wallet)
+                    <option value="manual_transfer">
+                      Transfer Bank Manual (SeaBank)
                     </option>
-                    <option value="bca_va">Virtual Account BCA</option>
-                    <option value="mandiri_va">Virtual Account Mandiri</option>
-                    <option value="bni_va">Virtual Account BNI</option>
-                    <option value="bri_va">Virtual Account BRI</option>
-                    <option value="gopay">E-Wallet GoPay</option>
-                    <option value="shopeepay">E-Wallet ShopeePay</option>
+                    {isTestingMode && (
+                      <>
+                        <option value="qris">
+                          QRIS Instant (Sandbox iPaymu)
+                        </option>
+                        <option value="bca_va">Virtual Account BCA (Sandbox)</option>
+                        <option value="mandiri_va">Virtual Account Mandiri (Sandbox)</option>
+                        <option value="bni_va">Virtual Account BNI (Sandbox)</option>
+                        <option value="bri_va">Virtual Account BRI (Sandbox)</option>
+                        <option value="gopay">E-Wallet GoPay (Sandbox)</option>
+                        <option value="shopeepay">E-Wallet ShopeePay (Sandbox)</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
                 {/* B. CARD SELECT BOX UNTUK DESKTOP (DESKTOP ONLY: hidden sm:grid) */}
-                <div className="hidden sm:grid grid-cols-3 gap-3">
+                <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {desktopPaymentCards.map((card) => (
                     <div
                       key={card.id}
@@ -736,6 +799,67 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
+
+                {/* BOX REKENING SEABANK JIKA METODE MANUAL DIPILIH */}
+                {paymentMethod === "manual_transfer" && (
+                  <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-blue-900 font-bold text-xs">
+                        <Building2 className="w-4 h-4 text-blue-600 shrink-0" />
+                        <span>Informasi Rekening Transfer Bank Manual</span>
+                      </div>
+                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-full">
+                        Resmi & Aktif
+                      </span>
+                    </div>
+
+                    <div className="bg-white border border-blue-200/60 rounded-xl p-3.5 space-y-2.5 text-xs">
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <span className="text-slate-500 text-[11px]">Bank Tujuan:</span>
+                        <span className="font-bold text-slate-800 font-rubik">SeaBank</span>
+                      </div>
+
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-100">
+                        <span className="text-slate-500 text-[11px]">Nomor Rekening:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-blue-700 font-mono text-sm tracking-wider">
+                            901308488803
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText("901308488803");
+                              showToast("Nomor rekening SeaBank berhasil disalin!", "success");
+                            }}
+                            className="p-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-all text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Copy className="w-3 h-3" />
+                            <span>Salin</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500 text-[11px]">Atas Nama (A.N.):</span>
+                        <span className="font-bold text-slate-800 text-[11px]">
+                          R Nurul Hidayati Hasyiani
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3 bg-amber-50 border border-amber-200/80 rounded-xl text-xs space-y-1">
+                      <div className="flex items-center justify-between text-amber-800 font-bold">
+                        <span>Total yang Harus Ditransfer:</span>
+                        <span className="text-sm font-rubik text-amber-900 font-bold">
+                          Rp {finalTransferAmount.toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-amber-700 leading-relaxed">
+                        ⚠️ PENTING: Mohon transfer pas senilai <strong>Rp {finalTransferAmount.toLocaleString("id-ID")}</strong> (termasuk 3 digit kode unik <strong>#{uniqueCode}</strong>) agar pesanan Anda otomatis terverifikasi dengan cepat oleh Admin.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -775,28 +899,24 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  {/* 
-                    [SISTEM ONGKIR DINONAKTIFKAN]
-                    Baris Ongkos Kirim di-comment out agar tidak tampil di ringkasan pembayaran checkout
                   <div className="flex justify-between text-slate-600">
-                    <span>Ongkos Kirim ({selectedCourier.name})</span>
-                    <span className="font-semibold text-slate-800">
-                      Rp {selectedCourier.price.toLocaleString("id-ID")}
-                    </span>
-                  </div>
-                  */}
-
-                  <div className="flex justify-between text-slate-600">
-                    <span>Biaya Layanan (0.5%)</span>
+                    <span>Biaya Layanan Website</span>
                     <span className="font-semibold text-slate-800">
                       Rp {feeWebsite.toLocaleString("id-ID")}
                     </span>
                   </div>
 
+                  {paymentMethod === "manual_transfer" && (
+                    <div className="flex justify-between text-amber-700 font-semibold">
+                      <span>Kode Unik Verifikasi (#{uniqueCode})</span>
+                      <span>+Rp {uniqueCode}</span>
+                    </div>
+                  )}
+
                   <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-slate-800">
                     <span className="font-bold text-xs">Total Pembayaran</span>
                     <span className="font-bold text-base text-primary">
-                      Rp {grandTotal.toLocaleString("id-ID")}
+                      Rp {finalTransferAmount.toLocaleString("id-ID")}
                     </span>
                   </div>
                 </div>
@@ -855,5 +975,19 @@ export default function CheckoutPage() {
         }}
       />
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-rubik text-xs text-slate-500 font-bold">
+          Memuat Halaman Checkout...
+        </div>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }

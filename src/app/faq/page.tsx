@@ -28,7 +28,7 @@ export default function FAQPage() {
     },
     {
       q: "Bagaimana cara menghubungi Admin?",
-      a: "Anda dapat menghubungi Admin langsung melalui WhatsApp di nomor 085233724944 atau email di idolafadhra212@gmail.com.",
+      a: "Anda dapat menghubungi Admin langsung melalui WhatsApp di nomor 082338130007 atau email di idolafadhra212@gmail.com.",
     },
   ];
 

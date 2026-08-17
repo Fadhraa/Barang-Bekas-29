@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +23,55 @@ export async function POST(request: Request) {
     console.log(
       `Processing Payment Request for Order [${orderId}] using Provider: ${provider.toUpperCase()}, Selected Method: [${paymentMethod || "all"}]`
     );
+
+    // =========================================================================
+    // 🛡️ SECURITY GUARD: VALIDASI TIMER 15 MENIT & STOK PRODUK REAL-TIME
+    // =========================================================================
+    if (orderId) {
+      const orderRef = doc(db, "orders", orderId);
+      const orderSnap = await getDoc(orderRef);
+
+      if (orderSnap.exists()) {
+        const orderData = orderSnap.data();
+
+        // 1. Cek Timer 15 Menit Pembayaran
+        if (orderData.expiredAt && Date.now() > orderData.expiredAt) {
+          await updateDoc(orderRef, { status: "Kadaluarsa" });
+          return NextResponse.json(
+            {
+              error:
+                "Batas waktu pembayaran pesanan ini telah habis (15 Menit). Pesanan otomatis dibatalkan.",
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // 2. Cek Stok Produk Real-Time di Firestore
+    if (items && Array.isArray(items)) {
+      for (const item of items) {
+        if (item.id && item.id !== "fee_website") {
+          const prodRef = doc(db, "products", item.id);
+          const prodSnap = await getDoc(prodRef);
+
+          if (prodSnap.exists()) {
+            const currentStock = prodSnap.data().stock || 0;
+            if (currentStock <= 0) {
+              if (orderId) {
+                await updateDoc(doc(db, "orders", orderId), { status: "Batal" });
+              }
+              return NextResponse.json(
+                {
+                  error: `Maaf, produk "${item.name}" baru saja habis didahului pembeli lain. Pesanan ini dibatalkan.`,
+                },
+                { status: 400 }
+              );
+            }
+          }
+        }
+      }
+    }
 
     // =========================================================================
     // 🅰️ PAYMENT GATEWAY PROVIDER 1: IPAYMU (SANDBOX / PRODUCTION)
@@ -99,7 +150,7 @@ export async function POST(request: Request) {
         cancelUrl: `${origin}/checkout`,
         referenceId: orderId,
         buyerName: cleanBuyerName,
-        buyerPhone: customerPhone || "085233724944",
+        buyerPhone: customerPhone || "082338130007",
         buyerEmail: customerEmail || "customer@barangbekas29.com",
       };
 
