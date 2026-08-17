@@ -25,6 +25,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://barangbekas29.com"
   ),
+  verification: {
+    google: "googlecc138d4ec8ad394e",
+  },
   openGraph: {
     title: "BarangBekas29 | Toko Online Barang Bekas Pilihan Sampang",
     description:
