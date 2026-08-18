@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/cartContext";
 import { useToast } from "@/context/ToastContext";
+import { getOptimizedImageUrl } from "@/lib/imageOptimizer";
 
 export default function Home() {
   // Mengambil data produk dinamis dari Global Product Cache
@@ -152,8 +153,10 @@ export default function Home() {
                     <div className="relative aspect-square bg-slate-100 overflow-hidden">
                       {product.images && product.images.length > 0 ? (
                         <img
-                          src={product.images[0]}
+                          src={getOptimizedImageUrl(product.images[0], 400)}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
@@ -257,8 +260,10 @@ export default function Home() {
                       className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-100"
                     >
                       <img
-                        src={img}
+                        src={getOptimizedImageUrl(img, 600)}
                         alt={`Foto ${idx + 1}`}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     </div>

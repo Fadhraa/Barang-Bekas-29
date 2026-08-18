@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import ModalUploader from "@/components/ImageUploader";
 import Modal from "@/components/Modal";
+import { useToast } from "@/context/ToastContext";
+import { getOptimizedImageUrl } from "@/lib/imageOptimizer";
 import { db } from "@/lib/firebase";
 import {
   collection,
@@ -128,8 +130,10 @@ export default function ProdukPage() {
                 <div className="relative aspect-square bg-slate-100 overflow-hidden">
                   {item.images && item.images.length > 0 ? (
                     <img
-                      src={item.images[0]}
+                      src={getOptimizedImageUrl(item.images[0], 400)}
                       alt={item.name}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover"
                     />
                   ) : (
