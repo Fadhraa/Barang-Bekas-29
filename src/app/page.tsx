@@ -87,8 +87,8 @@ export default function Home() {
         </div>
 
         {/* Container Utama Katalog Pembeli */}
-        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4 pb-12">
-          {/* Baris Search & Filter Kategori */}
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4 pb-12 min-h-[75vh]">
+          {/* Controls Bar: Search & Filter Kategori */}
           <div className="space-y-3 mb-6">
             {/* Search Input Bar */}
             <div className="relative max-w-md">
@@ -110,8 +110,8 @@ export default function Home() {
                   onClick={() => setSelectedCategory(cat)}
                   className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                     selectedCategory === cat
-                      ? "bg-primary text-white shadow-xs font-bold"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                      ? "bg-primary text-white shadow-xs"
+                      : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   }`}
                 >
                   {cat}
@@ -120,10 +120,19 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Grid Produk */}
+          {/* Grid Produk Skeleton Loading (Mencegah CLS / Shift) */}
           {loading ? (
-            <div className="text-center py-16 text-slate-400 text-xs font-medium">
-              Memuat daftar barang bekas...
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {[1, 2, 3, 4].map((n) => (
+                <div
+                  key={n}
+                  className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs animate-pulse p-3 flex flex-col justify-between h-64"
+                >
+                  <div className="w-full aspect-square bg-slate-200 rounded-xl mb-3" />
+                  <div className="h-3 bg-slate-200 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-slate-200 rounded w-1/2" />
+                </div>
+              ))}
             </div>
           ) : error ? (
             <div className="text-center py-12 bg-red-50 text-red-600 rounded-2xl text-xs p-4 border border-red-200">

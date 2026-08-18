@@ -103,10 +103,19 @@ export default function ProdukPage() {
       </div>
 
       {/* Grid Daftar Produk */}
-      <div className="p-6 max-w-6xl mx-auto">
+      <div className="p-6 max-w-6xl mx-auto min-h-[75vh]">
         {loading ? (
-          <div className="text-center py-12 text-slate-400 text-sm">
-            Memuat daftar produk...
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((n) => (
+              <div
+                key={n}
+                className="bg-white border border-slate-200/80 rounded-2xl overflow-hidden shadow-xs animate-pulse p-3 flex flex-col justify-between h-64"
+              >
+                <div className="w-full aspect-square bg-slate-200 rounded-xl mb-3" />
+                <div className="h-3 bg-slate-200 rounded w-3/4 mb-2" />
+                <div className="h-3 bg-slate-200 rounded w-1/2" />
+              </div>
+            ))}
           </div>
         ) : products.length === 0 ? (
           <div className="text-center py-16 bg-white border border-slate-200/80 rounded-2xl p-8 shadow-xs">

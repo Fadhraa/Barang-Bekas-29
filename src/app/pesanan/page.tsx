@@ -376,8 +376,17 @@ export default function PesananPage() {
 
           {/* Konten Daftar Kartu Pesanan */}
           {loading ? (
-            <div className="text-center py-16 text-slate-400 text-xs font-medium bg-white rounded-3xl border border-slate-200/80 shadow-xs">
-              Memuat data pesanan Anda...
+            <div className="space-y-4">
+              {[1, 2].map((n) => (
+                <div
+                  key={n}
+                  className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4 animate-pulse h-48"
+                >
+                  <div className="h-4 bg-slate-200 rounded w-1/3" />
+                  <div className="h-12 bg-slate-100 rounded-xl" />
+                  <div className="h-4 bg-slate-200 rounded w-1/2" />
+                </div>
+              ))}
             </div>
           ) : filteredOrders.length === 0 ? (
             <div className="bg-white rounded-3xl border border-slate-200/80 p-10 text-center shadow-xs my-4 space-y-3">

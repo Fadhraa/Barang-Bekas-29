@@ -42,37 +42,37 @@ export default function Hero() {
           {/* Gambar 1: Tas (Kiri Belakang) */}
           <img
             className="absolute z-10 w-30 xs:w-35 sm:w-40 object-contain drop-shadow-md -rotate-6 left-[5px] sm:left-4 top-1 md:top-6 sm:top-2 hover:scale-105 transition-all duration-300"
-            src="./hero_img/tas.png"
+            src="./hero_img/tas.webp"
             alt="Tas Bekas Pilihan"
             width={160}
             height={160}
             loading="eager"
             // @ts-ignore
-            fetchpriority="high"
+            fetchPriority="high"
           />
 
           {/* Gambar 2: Sepatu (Kanan Atas) */}
           <img
             className="absolute z-20 w-25 xs:w-35 sm:w-40 object-contain drop-shadow-lg rotate-6 left-[-20px] md:left-[-40px] sm:right-4 top-[50px] md:top-[75px] sm:top-1 hover:scale-105 transition-all duration-300"
-            src="./hero_img/sepatu.png"
+            src="./hero_img/sepatu.webp"
             alt="Sepatu Bekas Quality"
             width={160}
             height={160}
             loading="eager"
             // @ts-ignore
-            fetchpriority="high"
+            fetchPriority="high"
           />
 
           {/* Gambar 3: Tumbler (Tengah Depan) */}
           <img
             className="absolute z-30 w-25 xs:w-30 sm:w-35 object-contain drop-shadow-xl rotate-6 left-[50px] md:left-[70px] bottom-[-10px] hover:scale-110 transition-all duration-300"
-            src="./hero_img/tumbler.png"
+            src="./hero_img/tumbler.webp"
             alt="Tumbler Quality"
             width={140}
             height={140}
             loading="eager"
             // @ts-ignore
-            fetchpriority="high"
+            fetchPriority="high"
           />
         </div>
       </div>
