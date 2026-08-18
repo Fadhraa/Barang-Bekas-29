@@ -59,6 +59,7 @@ export default function Home() {
     const isSuccess = addToCart(product);
     if (isSuccess) {
       showToast(`"${product.name}" telah ditambahkan ke keranjang!`, "success");
+      setDetailProduct(null);
     }
   };
   // Handler Beli / Tanya via WhatsApp (Sanitasi Nomor HP & Mencegah Popup Blocker)

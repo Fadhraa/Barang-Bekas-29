@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/cartContext";
 import {
   Home,
   NotebookTabs,
@@ -39,6 +40,7 @@ interface NavbarProps {
 export default function Navbar({ items }: NavbarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { totalItems } = useCart();
   // Otomatis aktifkan menu admin jika mengakses rute /admin atau jika props items diisi
   const isAdminRoute = pathname.startsWith("/admin");
   const navItems = items || (isAdminRoute ? ADMIN_ITEMS : CUSTOMER_ITEMS);
@@ -88,6 +90,7 @@ export default function Navbar({ items }: NavbarProps) {
             const Icon = item.icon;
             // Pengecekan active tab secara presisi
             const isActive = pathname === item.href;
+            const isKeranjang = item.label === "Keranjang";
 
             return (
               <li key={item.label}>
@@ -98,6 +101,7 @@ export default function Navbar({ items }: NavbarProps) {
                   {/* Mobile Icon (Sembunyi di Desktop) */}
                   <div
                     className={`
+                      relative
                       flex 
                       items-center 
                       justify-center 
@@ -115,6 +119,11 @@ export default function Navbar({ items }: NavbarProps) {
                     `}
                   >
                     <Icon className="h-5 w-5" />
+                    {isKeranjang && totalItems > 0 && (
+                      <span className="absolute top-0 right-2 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-pulse">
+                        {totalItems}
+                      </span>
+                    )}
                   </div>
 
                   {/* Mobile Text (Sembunyi di Desktop) */}
@@ -134,7 +143,9 @@ export default function Navbar({ items }: NavbarProps) {
                   <span
                     className={`
                       hidden 
-                      md:inline 
+                      md:inline-flex
+                      items-center
+                      gap-1.5
                       text-sm 
                       font-semibold 
                       py-1 
@@ -149,7 +160,12 @@ export default function Navbar({ items }: NavbarProps) {
                       }
                     `}
                   >
-                    {item.label}
+                    <span>{item.label}</span>
+                    {isKeranjang && totalItems > 0 && (
+                      <span className="px-1.5 py-0.2 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                        {totalItems}
+                      </span>
+                    )}
                   </span>
                 </Link>
               </li>

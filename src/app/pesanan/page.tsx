@@ -505,6 +505,9 @@ export default function PesananPage() {
                         {order.feeWebsite !== undefined && order.feeWebsite > 0
                           ? `• Layanan: Rp ${order.feeWebsite.toLocaleString("id-ID")}`
                           : ""}
+                        {order.uniqueCode !== undefined && order.uniqueCode > 0
+                          ? ` • Kode Unik: Rp ${order.uniqueCode.toLocaleString("id-ID")}`
+                          : ""}
                         {order.shippingFee !== undefined && order.shippingFee > 0
                           ? ` • Ongkir: Rp ${order.shippingFee.toLocaleString("id-ID")}`
                           : ""}
