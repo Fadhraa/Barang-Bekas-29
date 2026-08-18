@@ -19,7 +19,6 @@
 
 # production
 /build
-/public/hero_img
 /src/app/setup-admin
 
 # misc
