@@ -15,20 +15,32 @@ export default function FAQPage() {
       a: "Setiap barang bekas yang kami tampilkan telah melewati pemeriksaan kondisi dan keaslian secara teliti. Detail minus dan kondisi fisik dijelaskan secara jujur di deskripsi masing-masing produk.",
     },
     {
-      q: "Bagaimana cara melakukan pembayaran?",
-      a: "Kami mendukung pembayaran instan via QRIS (GoPay, OVO, DANA, ShopeePay, BCA, Mandiri, dll) serta Transfer Bank resmi.",
+      q: "Bagaimana cara melakukan pembayaran Transfer Manual?",
+      a: "Pembayaran dilakukan via Transfer Bank ke rekening SeaBank 901308488803 (a.n R Nurul Hidayati Hasyiani). Pastikan mentransfer tepat senilai Total Pembayaran yang menyertakan 3 digit Kode Unik (misal Rp 20.847) agar admin dapat memverifikasi pesanan Anda secara cepat.",
     },
     {
-      q: "Berapa lama proses pengiriman barang?",
-      a: "Pesanan yang terkonfirmasi lunas sebelum jam 15.00 WIB akan dikirim pada hari yang sama. Resi pengiriman akan diberikan via WhatsApp/Email.",
+      q: "Mengapa ada Kode Unik pada total pembayaran?",
+      a: "Kode unik (misal #847) berfungsi untuk membedakan transaksi antar pembeli secara otomatis. Nominal kode unik ini sudah digabungkan ke dalam Total Pembayaran yang harus Anda transfer.",
     },
     {
-      q: "Apakah bisa mengajukan pengembalian jika barang tidak cocok?",
-      a: "Pengembalian barang/refund dapat dilakukan jika barang tidak sesuai deskripsi atau rusak fatal dengan melampirkan Video Unboxing maksimal 1x24 jam setelah paket diterima.",
+      q: "Berapa lama batas waktu pembayaran?",
+      a: "Batas waktu transfer adalah 15 menit sejak pesanan dibuat. Jika dalam 15 menit pembayaran belum ditransfer & dikonfirmasi, sistem akan mengosongkan pesanan secara otomatis agar produk dapat dibeli oleh pengguna lain.",
     },
     {
-      q: "Bagaimana cara menghubungi Admin?",
-      a: "Anda dapat menghubungi Admin langsung melalui WhatsApp di nomor 082338130007 atau email di idolafadhra212@gmail.com.",
+      q: "Kurir pengiriman apa yang digunakan?",
+      a: "Untuk area Kabupaten Sampang, pengiriman dilakukan menggunakan layanan Ojek Lokal (Gosako / Djontor). Pesanan Anda akan diantar langsung ke alamat tujuan setelah pembayaran terkonfirmasi Lunas.",
+    },
+    {
+      q: "Berapa biaya layanan platform?",
+      a: "Setiap pesanan dikenakan biaya layanan platform merata sebesar Rp 2.250 untuk mendukung pemeliharaan sistem dan kualitas operasional BarangBekas29.",
+    },
+    {
+      q: "Bagaimana cara mengonfirmasi pembayaran?",
+      a: "Setelah mentransfer, buka halaman 'Pesanan Saya' dan klik tombol 'Konfirmasi Transfer WA' untuk mengirimkan bukti transfer secara langsung ke Admin.",
+    },
+    {
+      q: "Apakah bisa mengajukan refund / retur barang?",
+      a: "Pengembalian barang/refund dapat dilakukan jika barang tidak sesuai deskripsi atau rusak fatal dengan melampirkan Video Unboxing utuh tanpa jeda maksimal 1x24 jam setelah paket diterima.",
     },
   ];
 

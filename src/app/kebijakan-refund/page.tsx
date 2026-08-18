@@ -36,36 +36,36 @@ export default function KebijakanRefundPage() {
                 1. Syarat Pengajuan Refund / Retur
               </h2>
               <p>
-                Pengembalian dana (refund) atau pengembalian barang (retur) dapat diajukan apabila terdapat ketidaksesuaian parah yang tidak disebutkan di deskripsi produk, seperti:
+                Pengembalian dana (refund) atau pengembalian barang (retur) dapat diajukan apabila terdapat ketidaksesuaian fatal yang tidak tercantum pada deskripsi produk, seperti:
               </p>
               <ul className="list-disc pl-5 space-y-1 text-slate-600">
-                <li>Barang yang diterima tidak sesuai dengan foto atau deskripsi produk.</li>
-                <li>Barang mengalami kerusakan fisik fatal saat perjalanan kurir.</li>
-                <li>Terdapat salah pengiriman tipe/ukuran barang dari pihak penjual.</li>
+                <li>Barang yang diterima tidak sesuai dengan foto atau deskripsi produk yang tercantum.</li>
+                <li>Barang mengalami kerusakan fisik fatal saat perjalanan oleh Ojek Lokal (Gosako / Djontor).</li>
+                <li>Terdapat kekeliruan pengiriman item produk dari pihak penjual.</li>
               </ul>
             </section>
 
             <section className="space-y-2">
               <h2 className="text-sm font-bold text-slate-800 font-rubik uppercase tracking-wider text-primary">
-                2. Wajib Video Unboxing
+                2. Wajib Video Unboxing Tanpa Jeda
               </h2>
               <p>
-                Pelanggan <strong>WAJIB menyertakan rekaman video unboxing</strong> tanpa jeda saat pembukaan paket pertama kali. Tanpa adanya video unboxing sah, pengajuan klaim refund tidak dapat diproses.
+                Pelanggan <strong>WAJIB melampirkan video unboxing utuh tanpa jeda / tanpa editan</strong> sejak paket pertama kali dibuka dari kurir. Tanpa adanya bukti video unboxing sah, pengajuan klaim refund atau retur tidak dapat diproses oleh Admin.
               </p>
             </section>
 
             <section className="space-y-2">
               <h2 className="text-sm font-bold text-slate-800 font-rubik uppercase tracking-wider text-primary">
-                3. Prosedur Pengembalian Dana
+                3. Prosedur Pengembalian Dana (Refund Manual)
               </h2>
               <p>
-                Pengajuan refund dapat dilakukan maksimal <strong>1 x 24 jam</strong> setelah paket diterima. Dana refund akan ditransfer kembali ke rekening/e-wallet pelanggan dalam waktu 1-3 hari kerja setelah barang retur sampai di gudang kami.
+                Pengajuan refund dapat dilakukan maksimal <strong>1 x 24 jam</strong> setelah paket diterima. Setelah klaim disetujui Admin dan barang retur diterima kembali di alamat kami, dana refund (termasuk nilai nominal unik & biaya layanan jika kesalahan dari pihak penjual) akan ditransfer kembali secara manual ke rekening bank/e-wallet milik pelanggan dalam kurun waktu 1-2 hari kerja.
               </p>
             </section>
 
             <div className="pt-4 border-t border-slate-100 flex items-center gap-2 text-slate-500 text-[11px]">
               <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
-              <span>Untuk bantuan klaim refund, hubungi WhatsApp: 082338130007</span>
+              <span>Untuk pengajuan klaim refund & kirim video unboxing, hubungi WhatsApp Admin: 082338130007</span>
             </div>
           </div>
         </main>
