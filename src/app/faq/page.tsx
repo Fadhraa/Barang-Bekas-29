@@ -32,7 +32,7 @@ export default function FAQPage() {
     },
     {
       q: "Berapa biaya layanan platform?",
-      a: "Setiap pesanan dikenakan biaya layanan platform merata sebesar Rp 2.250 untuk mendukung pemeliharaan sistem dan kualitas operasional BarangBekas29.",
+      a: "Setiap pesanan dikenakan biaya layanan platform merata sebesar Rp 1.500 untuk mendukung pemeliharaan sistem dan kualitas operasional BarangBekas29.",
     },
     {
       q: "Bagaimana cara mengonfirmasi pembayaran?",

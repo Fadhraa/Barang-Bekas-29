@@ -117,8 +117,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (sum, item) => sum + (Number(item.product.price) || 0) * item.quantity,
     0,
   );
-  // Biaya Layanan Website Flat Rp 2.250
-  const feeWebsite = cart.length > 0 ? 2250 : 0;
+  // Biaya Layanan Website Flat Rp 1.500
+  const feeWebsite = cart.length > 0 ? 1500 : 0;
   const totalAmount = totalPrice + feeWebsite;
   return (
     <CartContext.Provider

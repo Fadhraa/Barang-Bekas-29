@@ -65,7 +65,7 @@ export default function SyaratKetentuanPage() {
                 Pembeli <strong>WAJIB mentransfer tepat senilai Total Pembayaran yang mencakup 3 digit Kode Unik</strong> (misal Rp 20.847). Kode unik berfungsi memverifikasi transaksi pesanan Anda secara tepat dan akurat.
               </p>
               <p>
-                Setiap transaksi dikenakan biaya layanan platform merata sebesar <strong>Rp 2.250</strong> untuk pemeliharaan sistem.
+                Setiap transaksi dikenakan biaya layanan platform merata sebesar <strong>Rp 1.500</strong> untuk pemeliharaan sistem.
               </p>
             </section>
 
