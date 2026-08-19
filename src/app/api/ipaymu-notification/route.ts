@@ -9,20 +9,20 @@ export async function POST(request: Request) {
     let status = "";
     let trxId = "";
 
-    const contentType = request.headers.get("content-type") || "";
+    const rawText = await request.text();
+    console.log(`[iPaymu Webhook Raw Body]: ${rawText}`);
 
-    // Tangani Body FormData (Form URL Encoded / Multipart) & JSON dari iPaymu
-    if (contentType.includes("application/json")) {
-      const body = await request.json();
-      orderId = String(body.reference_id || body.referenceId || body.order_id || "").trim();
-      status = String(body.status || body.status_code || "").trim();
-      trxId = String(body.trx_id || body.transaction_id || "").trim();
-    } else {
-      const formData = await request.formData();
-      orderId = String(formData.get("reference_id") || formData.get("referenceId") || "").trim();
-      status = String(formData.get("status") || formData.get("status_code") || "").trim();
-      trxId = String(formData.get("trx_id") || formData.get("transaction_id") || "").trim();
+    let bodyObj: any = {};
+    try {
+      bodyObj = JSON.parse(rawText);
+    } catch {
+      const searchParams = new URLSearchParams(rawText);
+      bodyObj = Object.fromEntries(searchParams.entries());
     }
+
+    orderId = String(bodyObj.reference_id || bodyObj.referenceId || bodyObj.order_id || "").trim();
+    status = String(bodyObj.status || bodyObj.status_code || "").trim();
+    trxId = String(bodyObj.trx_id || bodyObj.transaction_id || "").trim();
 
     console.log(`[iPaymu Webhook] Received -> OrderId: "${orderId}", Status: "${status}", TrxID: "${trxId}"`);
 
@@ -87,4 +87,8 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ status: "OK", message: "iPaymu Webhook Endpoint Active" });
 }

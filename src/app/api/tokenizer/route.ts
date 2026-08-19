@@ -74,13 +74,12 @@ export async function POST(request: Request) {
     }
 
     // =========================================================================
-    // 🅰️ PAYMENT GATEWAY PROVIDER 1: IPAYMU (SANDBOX / PRODUCTION)
+    // 💳 PAYMENT GATEWAY: IPAYMU (SANDBOX / PRODUCTION)
     // =========================================================================
-    if (provider.toLowerCase() === "ipaymu") {
-      const rawVa =
-        process.env.IPAYMU_VA ||
-        process.env.VA_SB_IPAYMU ||
-        "0000005233724941";
+    const rawVa =
+      process.env.IPAYMU_VA ||
+      process.env.VA_SB_IPAYMU ||
+      "0000005233724941";
       const rawApiKey =
         process.env.IPAYMU_API_KEY ||
         process.env.API_KEY_SB_IPAYMU ||
@@ -229,72 +228,8 @@ export async function POST(request: Request) {
         console.error("Gagal iPaymu API Detail:", data);
         throw new Error(errorDetail);
       }
-    }
-
-    // =========================================================================
-    // 🅱️ PAYMENT GATEWAY PROVIDER 2: MIDTRANS SNAP (SANDBOX / PRODUCTION)
-    // =========================================================================
-    const serverKey =
-      process.env.MIDTRANS_SERVER_KEY || "SB-Mid-server-ya6fFH8vsfyP8gET_HcYLN83";
-    const authHeader = Buffer.from(`${serverKey}:`).toString("base64");
-
-    // Mapping Metode Pembayaran Pilihan ke parameter Midtrans `enabled_payments`
-    let enabledPayments: string[] | undefined = undefined;
-
-    if (paymentMethod === "bca_va") enabledPayments = ["bca_va"];
-    else if (paymentMethod === "mandiri_va") enabledPayments = ["echannel"];
-    else if (paymentMethod === "bni_va") enabledPayments = ["bni_va"];
-    else if (paymentMethod === "bri_va") enabledPayments = ["bri_va"];
-    else if (paymentMethod === "permata_va") enabledPayments = ["permata_va"];
-    else if (paymentMethod === "qris") enabledPayments = ["gopay", "other_qris", "shopeepay"];
-    else if (paymentMethod === "gopay") enabledPayments = ["gopay"];
-    else if (paymentMethod === "shopeepay") enabledPayments = ["shopeepay"];
-    else if (paymentMethod === "va_all") enabledPayments = ["bca_va", "echannel", "bni_va", "bri_va", "permata_va"];
-    else if (paymentMethod === "ewallet_all") enabledPayments = ["gopay", "shopeepay"];
-
-    const snapPayload: Record<string, any> = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: Math.round(Number(grossAmount)),
-      },
-      credit_card: { secure: true },
-      customer_details: {
-        first_name: customerName,
-        phone: customerPhone,
-        email: customerEmail,
-      },
-      item_details: items,
-    };
-
-    // Pasang enabled_payments jika pengguna memilih metode pembayaran spesifik
-    if (enabledPayments) {
-      snapPayload.enabled_payments = enabledPayments;
-    }
-
-    const snapResponse = await fetch(
-      "https://app.sandbox.midtrans.com/snap/v1/transactions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${authHeader}`,
-        },
-        body: JSON.stringify(snapPayload),
-      }
-    );
-
-    const snapData = await snapResponse.json();
-
-    if (!snapResponse.ok || !snapData.token) {
-      throw new Error(snapData.error_messages?.[0] || "Gagal mendapatkan token Midtrans");
-    }
-
-    return NextResponse.json({
-      provider: "midtrans",
-      token: snapData.token,
-    });
   } catch (error: any) {
-    console.error("Tokenizer API Route Error:", error);
+    console.error("iPaymu Tokenizer API Route Error:", error);
     return NextResponse.json(
       { error: error.message || "Internal Server Error" },
       { status: 500 }

@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useCart } from "@/context/cartContext";
 import { useToast } from "@/context/ToastContext";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import ConfirmationModal from "@/components/Confirmation_modal";
 import Script from "next/script";
 import { createOrder, updateOrderStatus } from "@/service/orderService";
@@ -76,11 +76,6 @@ function CheckoutContent() {
     etd: "Hari Ini",
   });
 
-  const searchParams = useSearchParams();
-  const mode = searchParams.get("mode");
-  const test = searchParams.get("test");
-  const isTestingMode = mode === "testing" || mode === "sandbox" || test === "ipaymu" || test === "midtrans";
-
   // Kode unik 3 digit acak per transaksi manual
   const [uniqueCode] = useState(() => Math.floor(Math.random() * 899) + 100);
 
@@ -92,34 +87,30 @@ function CheckoutContent() {
       id: "manual_transfer",
       title: "Transfer Bank Manual",
       description: "Transfer SeaBank (Kode Unik Otomatis)",
-      badge: "Rekomendasi Utama",
+      badge: "Manual Transfer",
       icon: <Building2 className="w-4 h-4 text-emerald-600" />,
     },
-    ...(isTestingMode
-      ? [
-          {
-            id: "qris",
-            title: "QRIS Instant (Sandbox)",
-            description: "Scan QR via BCA, DANA, OVO, GoPay, ShopeePay",
-            badge: "Mode Verifikasi",
-            icon: <QrCode className="w-4 h-4 text-blue-600" />,
-          },
-          {
-            id: "va_all",
-            title: "Virtual Account (Sandbox)",
-            description: "Transfer VA BCA, Mandiri, BNI, BRI, Permata",
-            badge: "Mode Verifikasi",
-            icon: <Building2 className="w-4 h-4 text-blue-600" />,
-          },
-          {
-            id: "ewallet_all",
-            title: "E-Wallet (Sandbox)",
-            description: "Bayar langsung via GoPay & ShopeePay",
-            badge: "Mode Verifikasi",
-            icon: <Wallet className="w-4 h-4 text-amber-500" />,
-          },
-        ]
-      : []),
+    {
+      id: "qris",
+      title: "QRIS Instant (iPaymu)",
+      description: "Scan QR via BCA, DANA, OVO, GoPay, ShopeePay",
+      badge: "Otomatis & Lunas Instan",
+      icon: <QrCode className="w-4 h-4 text-blue-600" />,
+    },
+    {
+      id: "va_all",
+      title: "Virtual Account Bank (iPaymu)",
+      description: "Transfer VA BCA, Mandiri, BNI, BRI, Permata",
+      badge: "Otomatis & Lunas Instan",
+      icon: <Building2 className="w-4 h-4 text-blue-600" />,
+    },
+    {
+      id: "ewallet_all",
+      title: "E-Wallet (iPaymu)",
+      description: "Bayar langsung via GoPay & ShopeePay",
+      badge: "Otomatis & Lunas Instan",
+      icon: <Wallet className="w-4 h-4 text-amber-500" />,
+    },
   ];
 
   // Total Pembayaran (Barang + Fee Website + Kode Unik untuk Transfer Manual)
@@ -251,102 +242,6 @@ function CheckoutContent() {
     }
   };
 
-  // =========================================================================
-  // 🅱️ FUNGSI KHUSUS PEMBAYARAN MIDTRANS (SNAP POPUP MODAL)
-  // =========================================================================
-  const handleMidtransPayment = async () => {
-    setIsProcessing(true);
-    try {
-      const { orderId, itemsPayload, calculatedGrossAmount } = prepareOrderPayload();
-
-      // 1. Simpan Dokumen Pesanan ke Firestore
-      await createOrder({
-        orderId,
-        customerName: namaLengkap,
-        customerPhone: noWhatsApp,
-        customerEmail: email,
-        address: alamatLengkap,
-        kecamatan,
-        kota,
-        provinsi,
-        notes: catatan,
-        items: cart.map((i) => ({
-          id: i.product.id,
-          name: i.product.name,
-          price: Number(i.product.price),
-          quantity: i.quantity,
-        })),
-        courier: selectedCourier,
-        subtotal: totalPrice,
-        feeWebsite: Math.round(feeWebsite),
-        // shippingFee: selectedCourier.price, // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
-        grossAmount: calculatedGrossAmount,
-        status: "Menunggu Pembayaran",
-        packingStatus: "Belum Dikemas",
-        expiredAt: Date.now() + 15 * 60 * 1000,
-      });
-
-      // 2. Simpan ke LocalStorage HP Pembeli
-      saveOrderToLocalStorage(orderId);
-
-      // 3. Minta Token Snap dari API Route Tokenizer
-      const res = await fetch("/api/tokenizer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          grossAmount: calculatedGrossAmount,
-          customerName: namaLengkap,
-          customerPhone: noWhatsApp,
-          customerEmail: email,
-          address: alamatLengkap,
-          kota,
-          paymentMethod,
-          items: itemsPayload,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.token) {
-        throw new Error(data.error || "Gagal mendapatkan token transaksi Midtrans");
-      }
-
-      setIsProcessing(false);
-
-      if (window.snap) {
-        window.snap.pay(data.token, {
-          onSuccess: async function (result: any) {
-            await updateOrderStatus(orderId, "Sudah Dibayar", {
-              paymentResult: result,
-            });
-            clearCart();
-            showToast("Pembayaran Berhasil! Pesanan Anda sedang diproses.", "success");
-            router.push("/pesanan");
-          },
-          onPending: async function (result: any) {
-            await updateOrderStatus(orderId, "Menunggu Pembayaran", {
-              paymentResult: result,
-            });
-            clearCart();
-            showToast("Pesanan dibuat! Silakan selesaikan pembayaran Anda.", "info");
-            router.push("/pesanan");
-          },
-          onError: function () {
-            showToast("Pembayaran gagal atau dibatalkan.", "error");
-          },
-          onClose: function () {
-            showToast("Anda menutup popup pembayaran.", "info");
-          },
-        });
-      }
-    } catch (err: any) {
-      console.error("Midtrans Payment Error:", err);
-      showToast(err.message || "Gagal memproses pembayaran Midtrans", "error");
-      setIsProcessing(false);
-    }
-  };
-
   // Handler Pembayaran Transfer Bank Manual (SeaBank)
   const handleManualTransferPayment = async () => {
     setIsProcessing(true);
@@ -405,12 +300,7 @@ function CheckoutContent() {
       await handleManualTransferPayment();
       return;
     }
-    const provider = process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PROVIDER || "ipaymu";
-    if (provider.toLowerCase() === "ipaymu") {
-      await handleIpaymuPayment();
-    } else {
-      await handleMidtransPayment();
-    }
+    await handleIpaymuPayment();
   };
 
   // Handler Beli / Tanya via WhatsApp
@@ -474,19 +364,6 @@ function CheckoutContent() {
 
   return (
     <div className="w-full min-h-screen bg-surface pb-24">
-      {/* Script External Midtrans Snap Sandbox */}
-      <Script
-        src={
-          process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ||
-          "https://app.sandbox.midtrans.com/snap/snap.js"
-        }
-        data-client-key={
-          process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ||
-          "SB-Mid-client-7v0L39m3qMRP8adc"
-        }
-        strategy="lazyOnload"
-      />
-
       {/* Header Halaman (TANPA NAVBAR - Hanya Tombol Kembali) */}
       <header className="w-full bg-white border-b border-slate-200/80 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -503,14 +380,14 @@ function CheckoutContent() {
                 Checkout & Pembayaran
               </h1>
               <p className="text-[11px] text-slate-500">
-                Terintegrasi Payment Gateway & Express Delivery
+                Terintegrasi iPaymu Payment Gateway & Express Delivery
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60">
             <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">iPaymu & Midtrans Verified</span>
+            <span className="hidden sm:inline">iPaymu Payment Gateway Verified</span>
           </div>
         </div>
       </header>
@@ -745,19 +622,15 @@ function CheckoutContent() {
                     <option value="manual_transfer">
                       Transfer Bank Manual (SeaBank)
                     </option>
-                    {isTestingMode && (
-                      <>
-                        <option value="qris">
-                          QRIS Instant (Sandbox iPaymu)
-                        </option>
-                        <option value="bca_va">Virtual Account BCA (Sandbox)</option>
-                        <option value="mandiri_va">Virtual Account Mandiri (Sandbox)</option>
-                        <option value="bni_va">Virtual Account BNI (Sandbox)</option>
-                        <option value="bri_va">Virtual Account BRI (Sandbox)</option>
-                        <option value="gopay">E-Wallet GoPay (Sandbox)</option>
-                        <option value="shopeepay">E-Wallet ShopeePay (Sandbox)</option>
-                      </>
-                    )}
+                    <option value="qris">
+                      QRIS Instant (GoPay, DANA, OVO, ShopeePay, BCA)
+                    </option>
+                    <option value="bca_va">Virtual Account BCA (iPaymu)</option>
+                    <option value="mandiri_va">Virtual Account Mandiri (iPaymu)</option>
+                    <option value="bni_va">Virtual Account BNI (iPaymu)</option>
+                    <option value="bri_va">Virtual Account BRI (iPaymu)</option>
+                    <option value="gopay">E-Wallet GoPay (iPaymu)</option>
+                    <option value="shopeepay">E-Wallet ShopeePay (iPaymu)</option>
                   </select>
                 </div>
 

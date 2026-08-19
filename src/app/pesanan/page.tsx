@@ -209,33 +209,15 @@ export default function PesananPage() {
         );
       }
 
-      // A. Jika Provider iPaymu: Redirect ke URL Pembayaran iPaymu
-      if (data.provider === "ipaymu" && data.paymentUrl) {
+      // Redirect ke URL Pembayaran iPaymu
+      if (data.paymentUrl) {
         showToast("Mengarahkan ke halaman pembayaran iPaymu...", "info");
         window.location.href = data.paymentUrl;
         return;
       }
-
-      // B. Jika Provider Midtrans: Buka Midtrans Snap Popup Window
-      if (window.snap && data.token) {
-        window.snap.pay(data.token, {
-          onSuccess: async function (result: any) {
-            await updateOrderStatus(order.orderId, "Sudah Dibayar", {
-              paymentResult: result,
-            });
-            showToast("Pembayaran Berhasil!", "success");
-          },
-          onPending: function () {
-            showToast("Silakan selesaikan pembayaran Anda.", "info");
-          },
-          onError: function () {
-            showToast("Pembayaran gagal.", "error");
-          },
-        });
-      }
     } catch (err: any) {
       console.error("Payment Handler Error:", err);
-      showToast(err.message || "Gagal memproses pembayaran", "error");
+      showToast(err.message || "Gagal memproses pembayaran iPaymu", "error");
     }
   };
 
@@ -302,19 +284,6 @@ export default function PesananPage() {
 
   return (
     <div className="w-full min-h-screen bg-surface flex flex-col justify-between">
-      {/* Script Midtrans Snap */}
-      <Script
-        src={
-          process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ||
-          "https://app.sandbox.midtrans.com/snap/snap.js"
-        }
-        data-client-key={
-          process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ||
-          "SB-Mid-client-7v0L39m3qMRP8adc"
-        }
-        strategy="lazyOnload"
-      />
-
       <div>
         <Navbar />
 
@@ -565,10 +534,7 @@ export default function PesananPage() {
                             className="px-4 py-2 bg-primary text-white font-bold text-xs rounded-xl hover:bg-primary/90 active:scale-[0.98] transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
                           >
                             <CreditCard className="w-3.5 h-3.5" />
-                            <span>
-                              Bayar Sekarang (
-                              {activeProvider === "ipaymu" ? "iPaymu" : "Midtrans"})
-                            </span>
+                            <span>Bayar Sekarang (iPaymu)</span>
                           </button>
                         )}
 
