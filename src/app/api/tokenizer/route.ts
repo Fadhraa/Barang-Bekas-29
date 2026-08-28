@@ -94,10 +94,15 @@ export async function POST(request: Request) {
           ? "https://sandbox.ipaymu.com"
           : "https://my.ipaymu.com";
 
-      const origin =
+      const rawOrigin =
         request.headers.get("origin") ||
         request.headers.get("referer") ||
         "http://localhost:3000";
+
+      // iPaymu Production menolak domain 'localhost'. Gunakan domain publik resmi jika di mode production.
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://barang-bekas-29.vercel.app";
+      const isLocalhost = rawOrigin.includes("localhost") || rawOrigin.includes("127.0.0.1");
+      const baseUrl = (env === "production" && isLocalhost) ? siteUrl : rawOrigin.replace(/\/$/, "");
 
       // 1. Format Payload Rincian Item (Sanitasi Karakter Khusus pada Nama Produk)
       const productArray =
@@ -144,9 +149,9 @@ export async function POST(request: Request) {
         product: productArray,
         qty: qtyArray,
         price: priceArray,
-        returnUrl: `${origin}/pesanan`,
-        notifyUrl: `${origin}/api/ipaymu-notification`,
-        cancelUrl: `${origin}/checkout`,
+        returnUrl: `${baseUrl}/pesanan`,
+        notifyUrl: `${baseUrl}/api/ipaymu-notification`,
+        cancelUrl: `${baseUrl}/checkout`,
         referenceId: orderId,
         buyerName: cleanBuyerName,
         buyerPhone: customerPhone || "082338130007",
