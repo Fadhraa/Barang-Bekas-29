@@ -85,31 +85,10 @@ function CheckoutContent() {
   const desktopPaymentCards = [
     {
       id: "manual_transfer",
-      title: "Transfer Bank Manual",
-      description: "Transfer SeaBank (Kode Unik Otomatis)",
-      badge: "Manual Transfer",
+      title: "Transfer Bank SeaBank (Konfirmasi Instan)",
+      description: "Transfer ke Rekening SeaBank dengan Kode Unik Verifikasi",
+      badge: "Bebas Biaya Admin & Terverifikasi",
       icon: <Building2 className="w-4 h-4 text-emerald-600" />,
-    },
-    {
-      id: "qris",
-      title: "QRIS Instant (iPaymu)",
-      description: "Scan QR via BCA, DANA, OVO, GoPay, ShopeePay",
-      badge: "Otomatis & Lunas Instan",
-      icon: <QrCode className="w-4 h-4 text-blue-600" />,
-    },
-    {
-      id: "va_all",
-      title: "Virtual Account Bank (iPaymu)",
-      description: "Transfer VA BCA, Mandiri, BNI, BRI, Permata",
-      badge: "Otomatis & Lunas Instan",
-      icon: <Building2 className="w-4 h-4 text-blue-600" />,
-    },
-    {
-      id: "ewallet_all",
-      title: "E-Wallet (iPaymu)",
-      description: "Bayar langsung via GoPay & ShopeePay",
-      badge: "Otomatis & Lunas Instan",
-      icon: <Wallet className="w-4 h-4 text-amber-500" />,
     },
   ];
 
@@ -415,14 +394,14 @@ function CheckoutContent() {
                 Checkout & Pembayaran
               </h1>
               <p className="text-[11px] text-slate-500">
-                Terintegrasi Midtrans Payment Gateway & Express Delivery
+                Transfer Bank SeaBank & Express Delivery
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60">
             <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">Midtrans & iPaymu Verified</span>
+            <span className="hidden sm:inline">SeaBank Transfer Verified</span>
           </div>
         </div>
       </header>
