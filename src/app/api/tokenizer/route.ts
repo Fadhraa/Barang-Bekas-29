@@ -178,6 +178,13 @@ export async function POST(request: Request) {
         .digest("hex")
         .toLowerCase();
 
+      // Log IP Server Vercel / Outbound IP
+      try {
+        const ipRes = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+        const ipData = await ipRes.json();
+        console.log(`[Vercel Server Outbound IP]: ${ipData.ip}`);
+      } catch (e) {}
+
       console.log(`iPaymu Debug -> VA: [${va}], Method: [${ipaymuMethod || "all"}], Channel: [${ipaymuChannel || "all"}]`);
 
       // 4. Tembak API iPaymu /api/v2/payment dengan Header Origin Resmi
