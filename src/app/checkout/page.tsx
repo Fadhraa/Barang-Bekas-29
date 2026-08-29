@@ -293,6 +293,103 @@ function CheckoutContent() {
   };
 
   // =========================================================================
+  // 🅱️ FUNGSI KHUSUS PEMBAYARAN MIDTRANS SNAP (SANDBOX / PRODUCTION)
+  // =========================================================================
+  const handleMidtransPayment = async () => {
+    setIsProcessing(true);
+    try {
+      const { orderId, itemsPayload, calculatedGrossAmount } = prepareOrderPayload();
+
+      // 1. Simpan Dokumen Pesanan ke Firestore
+      await createOrder({
+        orderId,
+        customerName: namaLengkap,
+        customerPhone: noWhatsApp,
+        customerEmail: email,
+        address: alamatLengkap,
+        kecamatan,
+        kota,
+        provinsi,
+        notes: catatan,
+        items: cart.map((i) => ({
+          id: i.product.id,
+          name: i.product.name,
+          price: Number(i.product.price),
+          quantity: i.quantity,
+        })),
+        courier: selectedCourier,
+        subtotal: totalPrice,
+        feeWebsite: Math.round(feeWebsite),
+        grossAmount: calculatedGrossAmount,
+        status: "Menunggu Pembayaran",
+        packingStatus: "Belum Dikemas",
+        expiredAt: Date.now() + 15 * 60 * 1000,
+      });
+
+      // 2. Simpan ke LocalStorage HP Pembeli
+      saveOrderToLocalStorage(orderId);
+
+      // 3. Minta Token Snap dari API Route Tokenizer
+      const res = await fetch("/api/tokenizer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          grossAmount: calculatedGrossAmount,
+          customerName: namaLengkap,
+          customerPhone: noWhatsApp,
+          customerEmail: email,
+          address: alamatLengkap,
+          kota,
+          paymentMethod,
+          items: itemsPayload,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || (!data.token && !data.redirect_url)) {
+        throw new Error(data.error || "Gagal mendapatkan token transaksi Midtrans");
+      }
+
+      setIsProcessing(false);
+
+      if (typeof window !== "undefined" && window.snap && data.token) {
+        window.snap.pay(data.token, {
+          onSuccess: async function (result: any) {
+            await updateOrderStatus(orderId, "Sudah Dibayar", {
+              paymentResult: result,
+            });
+            clearCart();
+            showToast("Pembayaran Berhasil! Pesanan Anda sedang diproses.", "success");
+            router.push("/pesanan");
+          },
+          onPending: async function (result: any) {
+            await updateOrderStatus(orderId, "Menunggu Pembayaran", {
+              paymentResult: result,
+            });
+            clearCart();
+            showToast("Pesanan dibuat! Silakan selesaikan pembayaran Anda.", "info");
+            router.push("/pesanan");
+          },
+          onError: function () {
+            showToast("Pembayaran gagal atau dibatalkan.", "error");
+          },
+          onClose: function () {
+            showToast("Anda menutup popup pembayaran.", "info");
+          },
+        });
+      } else if (data.redirect_url) {
+        window.location.href = data.redirect_url;
+      }
+    } catch (err: any) {
+      console.error("Midtrans Payment Error:", err);
+      showToast(err.message || "Gagal memproses pembayaran Midtrans", "error");
+      setIsProcessing(false);
+    }
+  };
+
+  // =========================================================================
   // 🔄 MASTER PAYMENT SWITCHER HANDLER
   // =========================================================================
   const handlePaymentSubmit = async () => {
@@ -300,7 +397,12 @@ function CheckoutContent() {
       await handleManualTransferPayment();
       return;
     }
-    await handleIpaymuPayment();
+    const provider = process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PROVIDER || "midtrans";
+    if (provider.toLowerCase() === "midtrans") {
+      await handleMidtransPayment();
+    } else {
+      await handleIpaymuPayment();
+    }
   };
 
   // Handler Beli / Tanya via WhatsApp
@@ -364,6 +466,18 @@ function CheckoutContent() {
 
   return (
     <div className="w-full min-h-screen bg-surface pb-24">
+      {/* Script External Midtrans Snap */}
+      <Script
+        src={
+          process.env.NEXT_PUBLIC_MIDTRANS_SNAP_URL ||
+          (process.env.MIDTRANS_ENV === "production"
+            ? "https://app.midtrans.com/snap/snap.js"
+            : "https://app.sandbox.midtrans.com/snap/snap.js")
+        }
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || ""}
+        strategy="lazyOnload"
+      />
+
       {/* Header Halaman (TANPA NAVBAR - Hanya Tombol Kembali) */}
       <header className="w-full bg-white border-b border-slate-200/80 sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -380,14 +494,14 @@ function CheckoutContent() {
                 Checkout & Pembayaran
               </h1>
               <p className="text-[11px] text-slate-500">
-                Terintegrasi iPaymu Payment Gateway & Express Delivery
+                Terintegrasi Midtrans Payment Gateway & Express Delivery
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 font-semibold bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/60">
             <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">iPaymu Payment Gateway Verified</span>
+            <span className="hidden sm:inline">Midtrans & iPaymu Verified</span>
           </div>
         </div>
       </header>

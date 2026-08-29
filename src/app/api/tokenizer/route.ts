@@ -74,7 +74,76 @@ export async function POST(request: Request) {
     }
 
     // =========================================================================
-    // 💳 PAYMENT GATEWAY: IPAYMU (SANDBOX / PRODUCTION)
+    // 🅰️ PAYMENT GATEWAY PROVIDER 1: MIDTRANS SNAP (SANDBOX / PRODUCTION)
+    // =========================================================================
+    if (provider.toLowerCase() === "midtrans") {
+      const serverKey =
+        process.env.MIDTRANS_SERVER_KEY || "SB-Mid-server-ya6fFH8vsfyP8gET_HcYLN83";
+      const authHeader = Buffer.from(`${serverKey}:`).toString("base64");
+      const midtransEnv = process.env.MIDTRANS_ENV || "production";
+      const snapUrl =
+        midtransEnv === "production"
+          ? "https://app.midtrans.com/snap/v1/transactions"
+          : "https://app.sandbox.midtrans.com/snap/v1/transactions";
+
+      let enabledPayments: string[] | undefined = undefined;
+
+      if (paymentMethod === "bca_va") enabledPayments = ["bca_va"];
+      else if (paymentMethod === "mandiri_va") enabledPayments = ["echannel"];
+      else if (paymentMethod === "bni_va") enabledPayments = ["bni_va"];
+      else if (paymentMethod === "bri_va") enabledPayments = ["bri_va"];
+      else if (paymentMethod === "permata_va") enabledPayments = ["permata_va"];
+      else if (paymentMethod === "qris") enabledPayments = ["gopay", "other_qris", "shopeepay"];
+      else if (paymentMethod === "gopay") enabledPayments = ["gopay"];
+      else if (paymentMethod === "shopeepay") enabledPayments = ["shopeepay"];
+      else if (paymentMethod === "va_all") enabledPayments = ["bca_va", "echannel", "bni_va", "bri_va", "permata_va"];
+      else if (paymentMethod === "ewallet_all") enabledPayments = ["gopay", "shopeepay"];
+
+      const snapPayload: Record<string, any> = {
+        transaction_details: {
+          order_id: orderId,
+          gross_amount: Math.round(Number(grossAmount)),
+        },
+        credit_card: { secure: true },
+        customer_details: {
+          first_name: customerName,
+          phone: customerPhone,
+          email: customerEmail,
+        },
+        item_details: items,
+      };
+
+      if (enabledPayments) {
+        snapPayload.enabled_payments = enabledPayments;
+      }
+
+      const snapResponse = await fetch(snapUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${authHeader}`,
+        },
+        body: JSON.stringify(snapPayload),
+      });
+
+      const snapData = await snapResponse.json();
+      console.log("Midtrans Snap Response Data:", JSON.stringify(snapData));
+
+      if (!snapResponse.ok || !snapData.token) {
+        throw new Error(
+          snapData.error_messages?.[0] || "Gagal mendapatkan token transaksi Midtrans"
+        );
+      }
+
+      return NextResponse.json({
+        provider: "midtrans",
+        token: snapData.token,
+        redirect_url: snapData.redirect_url,
+      });
+    }
+
+    // =========================================================================
+    // 💳 PAYMENT GATEWAY PROVIDER 2: IPAYMU (SANDBOX / PRODUCTION)
     // =========================================================================
     const rawVa =
       process.env.IPAYMU_VA ||
