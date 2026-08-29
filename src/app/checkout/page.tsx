@@ -61,7 +61,7 @@ function CheckoutContent() {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
       showToast(
         "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
-        "error"
+        "error",
       );
       return;
     }
@@ -85,7 +85,7 @@ function CheckoutContent() {
   const desktopPaymentCards = [
     {
       id: "manual_transfer",
-      title: "Transfer Bank SeaBank (Konfirmasi Instan)",
+      title: "Transfer Bank SeaBank ",
       description: "Transfer ke Rekening SeaBank dengan Kode Unik Verifikasi",
       badge: "Bebas Biaya Admin & Terverifikasi",
       icon: <Building2 className="w-4 h-4 text-emerald-600" />,
@@ -94,18 +94,19 @@ function CheckoutContent() {
 
   // Total Pembayaran (Barang + Fee Website + Kode Unik untuk Transfer Manual)
   const grandTotal = totalAmount;
-  const finalTransferAmount = paymentMethod === "manual_transfer" ? grandTotal + uniqueCode : grandTotal;
+  const finalTransferAmount =
+    paymentMethod === "manual_transfer" ? grandTotal + uniqueCode : grandTotal;
 
   // Helper Simpan ID Pesanan ke LocalStorage HP Pembeli untuk Privasi
   const saveOrderToLocalStorage = (orderId: string) => {
     try {
       const existing = JSON.parse(
-        localStorage.getItem("barang_bekas_my_orders") || "[]"
+        localStorage.getItem("barang_bekas_my_orders") || "[]",
       );
       if (!existing.includes(orderId)) {
         localStorage.setItem(
           "barang_bekas_my_orders",
-          JSON.stringify([orderId, ...existing])
+          JSON.stringify([orderId, ...existing]),
         );
       }
     } catch (e) {
@@ -141,7 +142,7 @@ function CheckoutContent() {
 
     const calculatedGrossAmount = itemsPayload.reduce(
       (sum, item) => sum + item.price * item.quantity,
-      0
+      0,
     );
 
     return { orderId, itemsPayload, calculatedGrossAmount };
@@ -187,7 +188,10 @@ function CheckoutContent() {
 
       saveOrderToLocalStorage(orderId);
       clearCart();
-      showToast("Pesanan berhasil dibuat! Silakan lakukan transfer.", "success");
+      showToast(
+        "Pesanan berhasil dibuat! Silakan lakukan transfer.",
+        "success",
+      );
       setIsProcessing(false);
       router.push("/pesanan");
     } catch (err: any) {
@@ -203,7 +207,8 @@ function CheckoutContent() {
   const handleMidtransPayment = async () => {
     setIsProcessing(true);
     try {
-      const { orderId, itemsPayload, calculatedGrossAmount } = prepareOrderPayload();
+      const { orderId, itemsPayload, calculatedGrossAmount } =
+        prepareOrderPayload();
 
       // 1. Simpan Dokumen Pesanan ke Firestore
       await createOrder({
@@ -254,7 +259,9 @@ function CheckoutContent() {
       const data = await res.json();
 
       if (!res.ok || (!data.token && !data.redirect_url)) {
-        throw new Error(data.error || "Gagal mendapatkan token transaksi Midtrans");
+        throw new Error(
+          data.error || "Gagal mendapatkan token transaksi Midtrans",
+        );
       }
 
       setIsProcessing(false);
@@ -266,7 +273,10 @@ function CheckoutContent() {
               paymentResult: result,
             });
             clearCart();
-            showToast("Pembayaran Berhasil! Pesanan Anda sedang diproses.", "success");
+            showToast(
+              "Pembayaran Berhasil! Pesanan Anda sedang diproses.",
+              "success",
+            );
             router.push("/pesanan");
           },
           onPending: async function (result: any) {
@@ -274,7 +284,10 @@ function CheckoutContent() {
               paymentResult: result,
             });
             clearCart();
-            showToast("Pesanan dibuat! Silakan selesaikan pembayaran Anda.", "info");
+            showToast(
+              "Pesanan dibuat! Silakan selesaikan pembayaran Anda.",
+              "info",
+            );
             router.push("/pesanan");
           },
           onError: function () {
@@ -308,7 +321,10 @@ function CheckoutContent() {
   // Handler Beli / Tanya via WhatsApp
   const handleWhatsAppCheckout = async () => {
     if (!namaLengkap || !noWhatsApp || !alamatLengkap) {
-      showToast("Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!", "error");
+      showToast(
+        "Mohon lengkapi Nama, WhatsApp, dan Alamat Pengiriman!",
+        "error",
+      );
       return;
     }
 
@@ -346,21 +362,21 @@ function CheckoutContent() {
         (item) =>
           `• ${item.product.name} (${item.quantity}x) = Rp ${(
             Number(item.product.price) * item.quantity
-          ).toLocaleString("id-ID")}`
+          ).toLocaleString("id-ID")}`,
       )
       .join("\n");
 
     const message = `Halo Admin BarangBekas29, saya ingin memesan barang [ID: ${orderId}]:\n\n*DATA PEMBELI:*\nNama: ${namaLengkap}\nWA: ${noWhatsApp}\nAlamat: ${alamatLengkap}, ${kecamatan}, ${kota}, ${provinsi}\n\n*RINCIAN PESANAN:*\n${itemsList}\n\n*RINCIAN BIAYA:*\nSubtotal: Rp ${totalPrice.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}\nBiaya Layanan: Rp ${feeWebsite.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}\n*TOTAL BAYAR: Rp ${grandTotal.toLocaleString(
-      "id-ID"
+      "id-ID",
     )}*\n\nMohon petunjuk pembayarannya. Terima kasih!`;
 
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
-      "_blank"
+      "_blank",
     );
   };
 
@@ -500,10 +516,13 @@ function CheckoutContent() {
                       📍 Informasi Wilayah Layanan Pengiriman
                     </p>
                     <p className="text-[11px] text-amber-800 leading-relaxed">
-                      Saat ini <strong>BarangBekas29</strong> hanya melayani pesanan dan pengiriman khusus untuk wilayah <strong>Kabupaten Sampang, Jawa Timur</strong>.
+                      Saat ini <strong>BarangBekas29</strong> hanya melayani
+                      pesanan dan pengiriman khusus untuk wilayah{" "}
+                      <strong>Kabupaten Sampang, Jawa Timur</strong>.
                     </p>
                     <p className="text-[10px] text-amber-700 font-semibold pt-0.5">
-                      🔔 Untuk pengiriman ke kota/kabupaten lain, mohon nantikan update perkembangan terbaru dari website kami!
+                      🔔 Untuk pengiriman ke kota/kabupaten lain, mohon nantikan
+                      update perkembangan terbaru dari website kami!
                     </p>
                   </div>
                 </div>
@@ -531,7 +550,9 @@ function CheckoutContent() {
                       onChange={(e) => setKota(e.target.value)}
                       className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-primary focus:bg-white transition-all text-xs"
                     >
-                      <option value="Kabupaten Sampang">Kabupaten Sampang</option>
+                      <option value="Kabupaten Sampang">
+                        Kabupaten Sampang
+                      </option>
                     </select>
                   </div>
 
@@ -606,12 +627,17 @@ function CheckoutContent() {
                   </div>
 
                   <p className="text-xs text-slate-600 leading-relaxed">
-                    Pengiriman pesanan Anda khusus wilayah Kabupaten Sampang akan dikirimkan langsung menggunakan mitra ekspedisi/ojek lokal (<strong>Gosako</strong> / <strong>Djontor</strong>).
+                    Pengiriman pesanan Anda khusus wilayah Kabupaten Sampang
+                    akan dikirimkan langsung menggunakan mitra ekspedisi/ojek
+                    lokal (<strong>Gosako</strong> / <strong>Djontor</strong>).
                   </p>
 
                   <div className="pt-2 border-t border-emerald-200/60 flex items-start gap-1.5 text-[11px] font-bold text-amber-800">
                     <Info className="w-3.5 h-3.5 shrink-0 text-amber-600 mt-0.5" />
-                    <span>Catatan: Biaya ongkos kirim (ongkir) ditanggung penuh oleh pembeli saat paket diterima di tempat (COD Ongkir).</span>
+                    <span>
+                      Catatan: Biaya ongkos kirim (ongkir) ditanggung penuh oleh
+                      pembeli saat paket diterima di tempat (COD Ongkir).
+                    </span>
                   </div>
                 </div>
               </div>
@@ -636,15 +662,6 @@ function CheckoutContent() {
                     <option value="manual_transfer">
                       Transfer Bank Manual (SeaBank)
                     </option>
-                    <option value="qris">
-                      QRIS Instant (GoPay, DANA, OVO, ShopeePay, BCA)
-                    </option>
-                    <option value="bca_va">Virtual Account BCA (iPaymu)</option>
-                    <option value="mandiri_va">Virtual Account Mandiri (iPaymu)</option>
-                    <option value="bni_va">Virtual Account BNI (iPaymu)</option>
-                    <option value="bri_va">Virtual Account BRI (iPaymu)</option>
-                    <option value="gopay">E-Wallet GoPay (iPaymu)</option>
-                    <option value="shopeepay">E-Wallet ShopeePay (iPaymu)</option>
                   </select>
                 </div>
 
@@ -702,12 +719,18 @@ function CheckoutContent() {
 
                     <div className="bg-white border border-blue-200/60 rounded-xl p-3.5 space-y-2.5 text-xs">
                       <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                        <span className="text-slate-500 text-[11px]">Bank Tujuan:</span>
-                        <span className="font-bold text-slate-800 font-rubik">SeaBank</span>
+                        <span className="text-slate-500 text-[11px]">
+                          Bank Tujuan:
+                        </span>
+                        <span className="font-bold text-slate-800 font-rubik">
+                          SeaBank
+                        </span>
                       </div>
 
                       <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                        <span className="text-slate-500 text-[11px]">Nomor Rekening:</span>
+                        <span className="text-slate-500 text-[11px]">
+                          Nomor Rekening:
+                        </span>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-blue-700 font-mono text-sm tracking-wider">
                             901308488803
@@ -716,7 +739,10 @@ function CheckoutContent() {
                             type="button"
                             onClick={() => {
                               navigator.clipboard.writeText("901308488803");
-                              showToast("Nomor rekening SeaBank berhasil disalin!", "success");
+                              showToast(
+                                "Nomor rekening SeaBank berhasil disalin!",
+                                "success",
+                              );
                             }}
                             className="p-1 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-all text-[10px] font-bold flex items-center gap-1 cursor-pointer"
                           >
@@ -727,7 +753,9 @@ function CheckoutContent() {
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <span className="text-slate-500 text-[11px]">Atas Nama (A.N.):</span>
+                        <span className="text-slate-500 text-[11px]">
+                          Atas Nama (A.N.):
+                        </span>
                         <span className="font-bold text-slate-800 text-[11px]">
                           R Nurul Hidayati Hasyiani
                         </span>
@@ -742,7 +770,13 @@ function CheckoutContent() {
                         </span>
                       </div>
                       <p className="text-[10px] text-amber-700 leading-relaxed">
-                        ⚠️ PENTING: Mohon transfer pas senilai <strong>Rp {finalTransferAmount.toLocaleString("id-ID")}</strong> (termasuk 3 digit kode unik <strong>#{uniqueCode}</strong>) agar pesanan Anda otomatis terverifikasi dengan cepat oleh Admin.
+                        ⚠️ PENTING: Mohon transfer pas senilai{" "}
+                        <strong>
+                          Rp {finalTransferAmount.toLocaleString("id-ID")}
+                        </strong>{" "}
+                        (termasuk 3 digit kode unik{" "}
+                        <strong>#{uniqueCode}</strong>) agar pesanan Anda
+                        otomatis terverifikasi dengan cepat oleh Admin.
                       </p>
                     </div>
                   </div>
