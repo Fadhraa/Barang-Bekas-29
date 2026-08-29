@@ -168,80 +168,6 @@ function CheckoutContent() {
     return { orderId, itemsPayload, calculatedGrossAmount };
   };
 
-  // =========================================================================
-  // 🅰️ FUNGSI KHUSUS PEMBAYARAN IPAYMU (DIRECT PAYMENT PAGE REDIRECT)
-  // =========================================================================
-  const handleIpaymuPayment = async () => {
-    setIsProcessing(true);
-    try {
-      const { orderId, itemsPayload, calculatedGrossAmount } = prepareOrderPayload();
-
-      // 1. Simpan Dokumen Pesanan ke Firestore
-      await createOrder({
-        orderId,
-        customerName: namaLengkap,
-        customerPhone: noWhatsApp,
-        customerEmail: email,
-        address: alamatLengkap,
-        kecamatan,
-        kota,
-        provinsi,
-        notes: catatan,
-        items: cart.map((i) => ({
-          id: i.product.id,
-          name: i.product.name,
-          price: Number(i.product.price),
-          quantity: i.quantity,
-        })),
-        courier: selectedCourier,
-        subtotal: totalPrice,
-        feeWebsite: Math.round(feeWebsite),
-        // shippingFee: selectedCourier.price, // 👈 [SISTEM ONGKIR DINONAKTIFKAN]
-        grossAmount: calculatedGrossAmount,
-        status: "Menunggu Pembayaran",
-        packingStatus: "Belum Dikemas",
-        expiredAt: Date.now() + 15 * 60 * 1000,
-      });
-
-      // 2. Simpan ke LocalStorage HP Pembeli
-      saveOrderToLocalStorage(orderId);
-
-      // 3. Minta URL Pembayaran iPaymu dari API Route Tokenizer
-      const res = await fetch("/api/tokenizer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          grossAmount: calculatedGrossAmount,
-          customerName: namaLengkap,
-          customerPhone: noWhatsApp,
-          customerEmail: email,
-          address: alamatLengkap,
-          kota,
-          paymentMethod,
-          items: itemsPayload,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.paymentUrl) {
-        throw new Error(data.error || "Gagal mendapatkan URL transaksi iPaymu");
-      }
-
-      setIsProcessing(false);
-      clearCart();
-      showToast("Mengarahkan ke halaman pembayaran iPaymu...", "info");
-
-      // Redirect ke Halaman Pembayaran iPaymu Resmi
-      window.location.href = data.paymentUrl;
-    } catch (err: any) {
-      console.error("iPaymu Payment Error:", err);
-      showToast(err.message || "Gagal memproses pembayaran iPaymu", "error");
-      setIsProcessing(false);
-    }
-  };
-
   // Handler Pembayaran Transfer Bank Manual (SeaBank)
   const handleManualTransferPayment = async () => {
     setIsProcessing(true);
@@ -397,12 +323,7 @@ function CheckoutContent() {
       await handleManualTransferPayment();
       return;
     }
-    const provider = process.env.NEXT_PUBLIC_PAYMENT_GATEWAY_PROVIDER || "midtrans";
-    if (provider.toLowerCase() === "midtrans") {
-      await handleMidtransPayment();
-    } else {
-      await handleIpaymuPayment();
-    }
+    await handleMidtransPayment();
   };
 
   // Handler Beli / Tanya via WhatsApp
