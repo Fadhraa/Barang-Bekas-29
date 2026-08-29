@@ -99,10 +99,10 @@ export async function POST(request: Request) {
         request.headers.get("referer") ||
         "http://localhost:3000";
 
-      // iPaymu Production menolak domain 'localhost'. Gunakan domain publik resmi jika di mode production.
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://barang-bekas-29.vercel.app";
+      // iPaymu Production menolak domain 'localhost'. Gunakan domain publik resmi yang terdaftar di iPaymu.
+      const siteUrl = process.env.IPAYMU_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://barang-bekas-29.vercel.app";
       const isLocalhost = rawOrigin.includes("localhost") || rawOrigin.includes("127.0.0.1");
-      const baseUrl = (env === "production" && isLocalhost) ? siteUrl : rawOrigin.replace(/\/$/, "");
+      const baseUrl = (env === "production" || isLocalhost) ? siteUrl.replace(/\/$/, "") : rawOrigin.replace(/\/$/, "");
 
       // 1. Format Payload Rincian Item (Sanitasi Karakter Khusus pada Nama Produk)
       const productArray =
@@ -180,11 +180,13 @@ export async function POST(request: Request) {
 
       console.log(`iPaymu Debug -> VA: [${va}], Method: [${ipaymuMethod || "all"}], Channel: [${ipaymuChannel || "all"}]`);
 
-      // 4. Tembak API iPaymu /api/v2/payment
+      // 4. Tembak API iPaymu /api/v2/payment dengan Header Origin Resmi
       const response = await fetch(`${host}/api/v2/payment`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Origin": siteUrl,
+          "Referer": siteUrl,
           signature: signature,
           va: va,
           timestamp: Date.now().toString(),
